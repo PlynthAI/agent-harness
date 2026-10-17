@@ -22,7 +22,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
-$claudeHome = Join-Path $env:USERPROFILE '.claude'
+$claudeHome = Join-Path ([Environment]::GetFolderPath('UserProfile')) '.claude'
 $failed = 0
 
 function Write-Row([bool]$Pass, [string]$Check, [string]$Expected, [string]$Found) {

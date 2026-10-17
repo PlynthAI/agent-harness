@@ -17,11 +17,14 @@
         by its map key that hands the assignment to that Codex role through
         scripts/codex-forward.mjs and the Codex CLI's `codex exec`, so the Codex role file
         keeps model, effort and instructions. The file of a role the map no
-        longer lists is removed;
+        longer lists is removed. A machine's own bindings live in an untracked
+        claude-map.local.json beside the map, holding only roles; each replaces
+        the map's binding for that role (a Claude reviewer where Codex is not
+        installed, say);
       - copies each mapped script (scripts/<name>.mjs) into the Claude home's
         scripts folder, guarded like the role files;
-      - links each installed Codex skill into the Claude skills directory as a
-        junction, except the Codex-only names the map excludes, and removes a
+      - links each installed Codex skill into the Claude skills directory (a
+        junction on Windows, a symbolic link elsewhere), except the Codex-only names the map excludes, and removes a
         link it would have made (same name, pointing at that Codex skill) once
         the skill is retired or excluded. Other links into the Codex home are
         the operator's and are left alone;
@@ -69,19 +72,37 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Windows and macOS volumes ignore case by default; Linux does not.
+$pathComparison = if ($IsLinux) { [StringComparison]::Ordinal } else { [StringComparison]::OrdinalIgnoreCase }
+$separator = [IO.Path]::DirectorySeparatorChar
+$linkType = if ($IsWindows) { 'Junction' } else { 'SymbolicLink' }
+
 function Get-FullPath([string]$Path) {
-    return [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($Path)).TrimEnd('\', '/')
+    $Path = [Environment]::ExpandEnvironmentVariables($Path)
+    if ($Path -eq '~' -or $Path -match '^~[\\/]') { $Path = [Environment]::GetFolderPath('UserProfile') + $Path.Substring(1) }
+    return [IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
+}
+
+# Map and state paths are written with backslashes; this joins one under a root
+# in the platform's own form.
+function Join-Relative([string]$Root, [string]$Relative) {
+    return Join-Path $Root ($Relative -replace '\\', $separator)
+}
+
+# Removes the link only, never its target: a junction goes as an empty
+# directory, a symbolic link (even one whose target is gone) as a file.
+function Remove-Link([string]$Path) {
+    if ($IsWindows) { [IO.Directory]::Delete($Path) } else { [IO.File]::Delete($Path) }
 }
 
 function Test-SamePath([string]$A, [string]$B) {
-    return [string]::Equals((Get-FullPath $A), (Get-FullPath $B), [StringComparison]::OrdinalIgnoreCase)
+    return [string]::Equals((Get-FullPath $A), (Get-FullPath $B), $pathComparison)
 }
 
 function Test-UnderPath([string]$Path, [string]$Root) {
     $full = Get-FullPath $Path
     $base = Get-FullPath $Root
-    return [string]::Equals($full, $base, [StringComparison]::OrdinalIgnoreCase) -or
-        $full.StartsWith($base + '\', [StringComparison]::OrdinalIgnoreCase)
+    return [string]::Equals($full, $base, $pathComparison) -or $full.StartsWith($base + $separator, $pathComparison)
 }
 
 function Get-LinkTargetPath([IO.FileSystemInfo]$Item) {
@@ -110,7 +131,7 @@ function Resolve-RealPath([string]$Path) {
             $target = Get-LinkTargetPath $item
             if (-not $target) { return $full }
             $rest = @($parts | Select-Object -Skip ($i + 1))
-            $full = if ($rest.Count) { Get-FullPath (Join-Path $target ($rest -join '\')) } else { $target }
+            $full = if ($rest.Count) { Get-FullPath (Join-Path $target ($rest -join $separator)) } else { $target }
             $redirected = $true
             break
         }
@@ -254,6 +275,18 @@ function Test-OwnHandler($Handler, [string]$Relative) {
 }
 
 $map = Get-Content -LiteralPath $MapPath -Raw | ConvertFrom-Json
+$localMapPath = Join-Path (Split-Path -Parent (Get-FullPath $MapPath)) 'claude-map.local.json'
+if (Test-Path -LiteralPath $localMapPath) {
+    $localMap = Get-Content -LiteralPath $localMapPath -Raw | ConvertFrom-Json
+    foreach ($key in $localMap.PSObject.Properties.Name) {
+        if ($key -ne 'roles') { throw "claude-map.local.json may set only roles, not '$key'" }
+    }
+    foreach ($property in @(if ($localMap.PSObject.Properties['roles']) { $localMap.roles.PSObject.Properties })) {
+        if (-not $map.roles.PSObject.Properties[$property.Name]) { throw "claude-map.local.json binds '$($property.Name)', which claude-map.json does not map" }
+        $map.roles.($property.Name) = $property.Value
+    }
+    Write-Host "Local role bindings: $localMapPath"
+}
 $mapRoot = Split-Path -Parent (Get-FullPath $MapPath)
 $codex = if ($CodexHome) { Get-FullPath $CodexHome } else { Get-FullPath $map.codexHome }
 $claude = if ($ClaudeHome) { Get-FullPath $ClaudeHome } else { Get-FullPath $map.claudeHome }
@@ -272,7 +305,7 @@ Write-Host "Codex home:  $codex"
 Write-Host "Claude home: $claude"
 Write-Host "Mode:        $(if ($Apply) { 'apply' } else { 'plan (no changes)' })"
 
-$statePath = Join-Path $claude '.harness-backup\state.json'
+$statePath = Join-Relative $claude '.harness-backup\state.json'
 $stateJson = @{}
 if (Test-Path -LiteralPath $statePath) { $stateJson = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json -AsHashtable }
 $state = $stateJson['files'] ?? @{}
@@ -322,7 +355,7 @@ foreach ($property in $map.roles.PSObject.Properties) {
         }
         $tomlName = $property.Name
     }
-    $toml = Join-Path $codex "agents\$tomlName.toml"
+    $toml = Join-Relative $codex "agents\$tomlName.toml"
     if (-not (Test-Path -LiteralPath $toml)) { throw "Mapped role has no installed Codex file: $toml" }
     $role = Read-RoleToml $toml
     if ($role.name -ne $tomlName) { throw "$toml declares name '$($role.name)', expected '$tomlName'" }
@@ -340,7 +373,7 @@ $scriptSpecs = @(if ($map.PSObject.Properties['scripts']) { $map.scripts })
 foreach ($script in $scriptSpecs) {
     $relative = "$script" -replace '/', '\'
     if ($relative -notmatch '^scripts\\[^\\/]+\.mjs$') { throw "A mapped script must be scripts/<name>.mjs, not '$script'" }
-    $source = Join-Path $mapRoot $relative
+    $source = Join-Relative $mapRoot $relative
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Mapped script has no source file: $source" }
     $files.Add([pscustomobject]@{
         Relative = $relative
@@ -361,7 +394,7 @@ foreach ($hook in $hookSpecs) {
     # hooks folder; `source` names it relative to this map, inside the checkout.
     # Containment is judged on real paths, so a junction or symbolic link inside
     # the checkout cannot lead the source out of it.
-    $source = if ($hook.PSObject.Properties['source']) { Get-FullPath (Join-Path $mapRoot $hook.source) } else { Join-Path $mapRoot $relative }
+    $source = if ($hook.PSObject.Properties['source']) { Get-FullPath (Join-Path $mapRoot $hook.source) } else { Join-Relative $mapRoot $relative }
     $realSource = Resolve-RealPath $source
     if ($realSource -notmatch '\.ps1$' -or -not (Test-UnderPath $realSource (Resolve-RealPath (Split-Path -Parent $mapRoot)))) { throw "Mapped hook source '$($hook.source)' resolves to $realSource, which is outside the harness checkout or not a .ps1 file" }
     if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Mapped hook has no source script: $source" }
@@ -372,7 +405,7 @@ foreach ($hook in $hookSpecs) {
     })
 }
 foreach ($file in $files) {
-    $current = Get-TextOrNull (Join-Path $claude $file.Relative)
+    $current = Get-TextOrNull (Join-Relative $claude $file.Relative)
     $action = if ($null -eq $current) { 'add' } elseif ($current -ceq $file.Content) { 'unchanged' } else { 'replace' }
     # A role file the operator changed after the last sync, or one this adapter
     # never wrote, is theirs until they say otherwise.
@@ -392,7 +425,7 @@ $mapped = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIg
 foreach ($file in $files) { [void]$mapped.Add($file.Relative) }
 foreach ($relative in @($state.Keys | Sort-Object)) {
     if ($relative -notmatch '^(agents\\[^\\/]+\.md|hooks\\[^\\/]+\.ps1|scripts\\[^\\/]+\.mjs)$' -or $mapped.Contains($relative)) { continue }
-    $current = Get-TextOrNull (Join-Path $claude $relative)
+    $current = Get-TextOrNull (Join-Relative $claude $relative)
     if ($null -eq $current) { continue }   # already gone; its record is dropped
     $action = 'remove'
     if (-not $Force -and $state[$relative] -ne (Get-Hash $current)) {
@@ -491,7 +524,7 @@ foreach ($hook in $hookSpecs) {
     $handler = [ordered]@{
         type    = 'command'
         command = 'pwsh'
-        args    = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ((Join-Path $claude $relative) -replace '\\', '/'))
+        args    = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ((Join-Relative $claude $relative) -replace '\\', '/'))
     }
     if ($hook.PSObject.Properties['timeout']) { $handler.timeout = $hook.timeout }
     $group = [ordered]@{}
@@ -631,9 +664,9 @@ New-Item -ItemType Directory -Path $backup | Out-Null
 $manifest = [ordered]@{ id = $backupId; created = $now.ToString('o'); codexHome = $codex; claudeHome = $claude; files = @(); links = @(); hooks = @() }
 $settingsFiles = @(if ($settingsWrite) { $settingsWrite })
 foreach ($file in @($files | Where-Object Action -eq 'replace') + $removals + @($settingsFiles | Where-Object Action -eq 'replace')) {
-    $destination = Join-Path $backup $file.Relative
+    $destination = Join-Relative $backup $file.Relative
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
-    Copy-Item -LiteralPath (Join-Path $claude $file.Relative) -Destination $destination
+    Copy-Item -LiteralPath (Join-Relative $claude $file.Relative) -Destination $destination
 }
 foreach ($file in $writes + $removals + $settingsFiles) {
     $manifest.files += [ordered]@{ path = $file.Relative; action = $file.Action }
@@ -650,22 +683,22 @@ foreach ($entry in $hookChanges) {
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $backup 'manifest.json') -Encoding utf8
 
 foreach ($file in $writes) {
-    $destination = Join-Path $claude $file.Relative
+    $destination = Join-Relative $claude $file.Relative
     New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
     [IO.File]::WriteAllText($destination, $file.Content, [Text.UTF8Encoding]::new($false))
 }
-foreach ($file in $removals) { [IO.File]::Delete((Join-Path $claude $file.Relative)) }
+foreach ($file in $removals) { [IO.File]::Delete((Join-Relative $claude $file.Relative)) }
 New-Item -ItemType Directory -Force -Path $claudeSkills | Out-Null
 foreach ($entry in $links) {
     switch ($entry.Action) {
-        'link'   { New-Item -ItemType Junction -Path $entry.Path -Target $entry.Target | Out-Null }
-        'unlink' { [IO.Directory]::Delete($entry.Path) }   # removes the link only, never its target
+        'link'   { New-Item -ItemType $linkType -Path $entry.Path -Target $entry.Target | Out-Null }
+        'unlink' { Remove-Link $entry.Path }
     }
 }
 foreach ($entry in $folderChanges) {
     switch ($entry.Action) {
-        'link'   { New-Item -ItemType Junction -Path $entry.Path -Target $entry.Target | Out-Null }
-        'unlink' { [IO.Directory]::Delete($entry.Path) }   # removes the link only, never its target
+        'link'   { New-Item -ItemType $linkType -Path $entry.Path -Target $entry.Target | Out-Null }
+        'unlink' { Remove-Link $entry.Path }
     }
 }
 # The scripts are in place before the settings entry that runs them. The new

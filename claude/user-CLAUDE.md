@@ -9,7 +9,8 @@ reads. Apply it here with these Claude Code equivalents:
   files; delegate to them with the Agent tool under AGENTS.md's role names.
   smart_worker (Opus, high), fast_worker, explorer and researcher (Sonnet 5.5,
   high), planner (Opus, xhigh), tester and fast_review (Haiku, xhigh;
-  fast_review read-only) run Claude models. reviewer is a thin forwarder: it
+  fast_review read-only) run Claude models. reviewer, unless the checkout's
+  claude/claude-map.local.json binds it to Claude, is a thin forwarder: it
   runs the Codex role's OpenAI model headlessly through `codex exec`, which
   keeps an exec session for traces but adds no app thread, and returns its
   reply verbatim. It may write only its own findings file in `.state/` of the

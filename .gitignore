@@ -42,3 +42,10 @@ Thumbs.db
 # The owner's private AGENTS.md overlay. This private source tracks it anyway
 # (an ignore rule never untracks a file); in a public clone it stays out of git.
 /AGENTS.private.md
+
+# A machine's own Claude role bindings (claude/sync-claude.ps1), such as a
+# Claude reviewer where Codex is not installed.
+/claude/claude-map.local.json
+
+# A task's checkpoint and small scratch (.state/state.md, review records); never versioned.
+/.state/

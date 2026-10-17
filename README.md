@@ -5,6 +5,8 @@ Codex and Claude Code. One source deploys to both runtimes, so every project on
 a machine gets the same way of working: how to read a request, who does what,
 how work is planned, built, reviewed and delivered, and when to stop and ask.
 
+**Agents:** to install this harness, follow [SETUP.md](SETUP.md).
+
 This is a public copy of a working harness. It is published as a snapshot: each
 update arrives as one commit, and issues and pull requests are not reviewed.
 
@@ -25,18 +27,11 @@ update arrives as one commit, and issues and pull requests are not reviewed.
 
 ## Installing it
 
-The scripts need PowerShell 7 and Node.js 24.
-
-1. Copy `AGENTS.private.example.md` to `AGENTS.private.md` and write your own
-   section 01. It replaces the generic section 01 when you deploy, and it is
-   never part of this public copy.
-2. Run `pwsh -NoProfile -File config/deploy.ps1` to see what would change in
-   your Codex home (`~/.codex`), then add `-Apply` to copy it. Deploy keeps a
-   backup of every file it replaces and reports, rather than overwrites, a file
-   you edited in the Codex home.
-3. For Claude Code, run `pwsh -NoProfile -File claude/sync-claude.ps1 -Apply`
-   after each deploy. It generates the Claude roles from the same role files and
-   links the shared skills.
+Point your coding agent, Codex or Claude Code, at this repository and ask it
+to set the harness up. It follows [SETUP.md](SETUP.md): it asks you a few
+questions first (who you are, which agents you use), installs for those
+runtimes and checks the result. The same page works as a manual guide. It runs
+on Windows, macOS and Linux with git, Node.js 24 and PowerShell 7.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) before changing how the harness behaves,
 and [harness-docs/](harness-docs/index.md) for how its parts fit together.

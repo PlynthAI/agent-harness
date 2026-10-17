@@ -98,6 +98,11 @@ names the Codex role when the two differ (a key `codex-fast_worker` with
 `"role": "fast_worker"` would run `fast_worker`); `"write": true` allows edits.
 The entry carries no model or effort: those stay in the Codex role file.
 
+A machine's own bindings go in `claude-map.local.json` beside the map: an
+untracked file holding only `roles`, each replacing the map's binding for that
+role. A machine without Codex binds `reviewer` to a Claude model there, as
+[SETUP.md](../SETUP.md) describes; the sync names the file when it reads it.
+
 The current map has eight roles. smart_worker (Opus `high`: design, UI,
 frontend and taste work, and harder implementation and investigation),
 fast_worker, explorer and researcher (Sonnet 5.5 `high`), planner (Opus `xhigh`,
