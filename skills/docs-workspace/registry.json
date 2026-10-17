@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "description": "Host registry for the shared workspace resolver: an example to replace with your own projects. Reusable resolution logic lives in scripts/resolve-workspace.mjs; this file holds only host-specific mappings (references/registry-format.md). Override per host with --registry, CODEX_WORKSPACE_REGISTRY, or <CODEX_HOME>/workspace-registry.json.",
+  "plainNamesPreferred": true,
+  "workspaceParent": "C:\\workspace",
+  "scratchRoot": "C:\\workspace\\.scratch",
+  "workspaceLayout": "v1",
+  "sharedRoots": [],
+  "routes": {
+    "goals": "goals",
+    "findings": "findings",
+    "prds": "prds",
+    "specs": "specs",
+    "adrs": "adrs",
+    "plans": "plans",
+    "artifacts": "artifacts",
+    "reviews": "reviews",
+    "receipts": "receipts",
+    "objects": null,
+    "index": null,
+    "scratch": "task-scratch"
+  },
+  "projects": [
+    {
+      "id": "example-app",
+      "identity": {
+        "remotes": [
+          "example-org/example-app"
+        ]
+      },
+      "workspaceRoot": "C:\\workspace\\example-brain\\Workspaces\\example-app",
+      "routes": {
+        "reviews": null,
+        "receipts": null
+      },
+      "writer": null,
+      "notes": [
+        "Goals and findings are plain Markdown, with optional plans; a task's checkpoint and small scratch live in its checkout's .state/. Use workspace AGENTS.md for templates and project-owned routes."
+      ],
+      "brainRoot": "C:\\workspace\\example-brain"
+    }
+  ]
+}

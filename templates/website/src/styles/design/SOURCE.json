@@ -1,0 +1,92 @@
+{
+  "$comment": "What the harness project copier (new-project.mjs) applied from the design library. sha256 is each source file's hash at apply time and written the hash of the file as written here (DESIGN.md with its name line set back to the template placeholder); tokens.css, type.css and role-bridge.css are copied unchanged. To change the design, run node templates/new-project.mjs design <project-dir> --design <profile-id> from the harness checkout rather than editing these files.",
+  "profile": "kit",
+  "name": "Kit",
+  "library": {
+    "commit": "b8ae3f9ff7f9cadb5a8694b398ccb9293c3bcd48",
+    "workingTree": "clean"
+  },
+  "files": [
+    {
+      "path": "DESIGN.md",
+      "from": "foundations/kit/DESIGN.md",
+      "sha256": "a4e434af5afca8103f3a669a131480ed552b3e01cbb861ce420f60ab59ee1093",
+      "written": "f4dc83c3a3662875ea02a4ef698da9fd3bc3f3ca8d604d9ddfcf960ab39b7658"
+    },
+    {
+      "path": "src/styles/design/tokens.css",
+      "from": "foundations/kit/tokens.css",
+      "sha256": "180f6f0ec6683416a4fa4d808a005ce7d8419e2315454adaebda393f1d17e8ce",
+      "written": "180f6f0ec6683416a4fa4d808a005ce7d8419e2315454adaebda393f1d17e8ce"
+    },
+    {
+      "path": "src/styles/design/type.css",
+      "from": "foundations/kit/type.css",
+      "sha256": "326498897d8ecf14c16e3400c6475b8bede7de7f235018816f5fe28937ea6da4",
+      "written": "326498897d8ecf14c16e3400c6475b8bede7de7f235018816f5fe28937ea6da4"
+    },
+    {
+      "path": "src/styles/design/role-bridge.css",
+      "from": "profiles/kit/role-bridge.css",
+      "sha256": "840c329a2c14306d34053f377d67578a8ba5df169ade06c89cf8038017ee7e63",
+      "written": "840c329a2c14306d34053f377d67578a8ba5df169ade06c89cf8038017ee7e63"
+    },
+    {
+      "path": "src/styles/design/fonts.css",
+      "from": "profiles/kit/profile.json",
+      "sha256": "3573477bd537ebf13d73483bf1ac047e2e452fa35b18011b5316db83504d330c",
+      "written": "ade47fac66033b85451fcb58a31ed5767e29653276c9283d4ddca03c729e5b5e"
+    }
+  ],
+  "fonts": {
+    "Mona Sans": {
+      "face": "\"Mona Sans Variable\"",
+      "package": "@fontsource-variable/mona-sans",
+      "licence": "OFL-1.1"
+    },
+    "Mona Sans Variable": {
+      "face": "\"Mona Sans Variable\"",
+      "package": "@fontsource-variable/mona-sans",
+      "licence": "OFL-1.1"
+    },
+    "Geist Mono": {
+      "face": "\"Geist Mono Variable\"",
+      "package": "@fontsource-variable/geist-mono",
+      "licence": "OFL-1.1"
+    },
+    "Geist Mono Variable": {
+      "face": "\"Geist Mono Variable\"",
+      "package": "@fontsource-variable/geist-mono",
+      "licence": "OFL-1.1"
+    },
+    "Geist Pixel": {
+      "face": "\"Geist Pixel\"",
+      "package": "@fontsource/geist-pixel",
+      "licence": "OFL-1.1"
+    }
+  },
+  "roles": {
+    "ink": "css:--ink",
+    "ink-muted": "css:--ink-2",
+    "paper": "css:--bg",
+    "surface": "css:--surface",
+    "surface-soft": "css:--surface-2",
+    "line": "css:--line",
+    "line-strong": "css:--line-strong",
+    "line-bold": "css:--line-bold",
+    "accent": "css:--accent",
+    "accent-ink": "css:--accent",
+    "on-accent": "css:--on-accent",
+    "focus": "css:--focus",
+    "danger": "css:--danger",
+    "on-danger": "css:--on-danger",
+    "success": "css:--success-ink",
+    "warning": "css:--warning-ink",
+    "font-body": "css:--font-sans",
+    "font-display": "css:--font-sans",
+    "font-mono": "css:--font-mono",
+    "radius-control": "css:--radius-md",
+    "radius-panel": "css:--radius-xl",
+    "radius-pill": "css:--radius-pill"
+  }
+}

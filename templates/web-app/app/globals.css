@@ -1,0 +1,212 @@
+@import "tailwindcss";
+/* The dev runner writes its log under .cache/; Tailwind must not scan it for class names. */
+@source not "../.cache";
+
+/*
+ * The design: DESIGN.md and styles/design/ hold the design library profile the harness copier
+ * applied (the Kit by default). Change it with the copier's design command
+ * (node templates/new-project.mjs design <project-dir> --design <profile-id>, from the harness
+ * checkout) rather than editing those files.
+ * tokens.css and role-bridge.css sit in the base layer, over the scale defaults below; the type
+ * roles (.t-*) in type.css sit in the components layer, so a utility on the same element can
+ * still adjust them.
+ */
+@import "../styles/design/fonts.css";
+@import "../styles/design/tokens.css" layer(base);
+@import "../styles/design/role-bridge.css" layer(base);
+@import "../styles/design/type.css" layer(components);
+
+/*
+ * Scale defaults: the Kit's type sizes, spacing, radii, shadows and motion, for a design that
+ * leaves any of them out. They sit in the theme layer, so a design's own tokens.css wins.
+ */
+@layer theme {
+  :root {
+    --text-2xs: 11px;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-md: 15px;
+    --text-lg: 17px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 30px;
+    --text-4xl: 38px;
+    --text-5xl: 48px;
+    --text-6xl: 64px;
+
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --space-20: 80px;
+    --space-24: 96px;
+
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-2xl: 24px;
+
+    --shadow-xs: 0 1px 1px rgb(0 0 0 / 0.04);
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.06), 0 1px 1px rgb(0 0 0 / 0.03);
+    --shadow-md: 0 6px 16px -4px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 24px 48px -12px rgb(0 0 0 / 0.16), 0 6px 12px -6px rgb(0 0 0 / 0.06);
+
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --duration-fast: 120ms;
+    --duration-base: 200ms;
+    --duration-slow: 360ms;
+
+    /*
+     * The Kit names type.css reads, from the roles, for a design that does not define them. In
+     * the theme layer, so a design's own definitions in the base layer win and cannot cycle.
+     */
+    --ink: var(--role-ink);
+    --ink-2: var(--role-ink-muted);
+    --ink-3: color-mix(in oklab, var(--role-ink-muted) 80%, var(--role-paper));
+    --font-sans: var(--role-font-body);
+    --font-mono: var(--role-font-mono);
+    --font-pixel: var(--role-font-mono);
+  }
+}
+
+/*
+ * The token contract: Tailwind and shadcn names bind to the design library's twenty roles
+ * (--role-*, from role-bridge.css), never to a design's own token names, so any library profile
+ * re-themes the app. Shades no role covers prefer the design's own token of the Kit's name and
+ * otherwise derive from the roles. The default palette is removed so a raw hue cannot slip in.
+ * shadcn's "accent" is a hover fill, so it maps to the soft surface; the design's accent is
+ * shadcn's primary.
+ */
+@theme inline {
+  --color-*: initial;
+
+  --color-background: var(--role-paper);
+  --color-foreground: var(--role-ink);
+  --color-card: var(--role-surface);
+  --color-card-foreground: var(--role-ink);
+  --color-primary: var(--role-accent);
+  --color-primary-foreground: var(--role-on-accent);
+  --color-secondary: var(--role-surface-soft);
+  --color-secondary-foreground: var(--role-ink);
+  --color-muted: var(--role-surface-soft);
+  --color-muted-foreground: var(--ink-3);
+  --color-accent: var(--role-surface-soft);
+  --color-accent-foreground: var(--role-ink);
+  --color-destructive: var(--role-danger);
+  --color-border: var(--role-line);
+  --color-input: var(--line-strong, color-mix(in oklab, var(--role-line) 88%, var(--role-ink)));
+  --color-ring: var(--role-focus);
+
+  --color-surface: var(--role-surface);
+  --color-surface-2: var(--role-surface-soft);
+  --color-ink: var(--role-ink);
+  --color-ink-2: var(--role-ink-muted);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--role-line);
+  --color-line-strong: var(
+    --line-strong,
+    color-mix(in oklab, var(--role-line) 88%, var(--role-ink))
+  );
+  --color-danger: var(--role-danger);
+  --color-danger-ink: var(
+    --danger-ink,
+    color-mix(in oklab, var(--role-danger) 85%, var(--role-ink))
+  );
+  --color-danger-soft: var(
+    --danger-soft,
+    color-mix(in oklab, var(--role-danger) 8%, var(--role-paper))
+  );
+  --color-success: var(--success, var(--role-success));
+  --color-success-ink: var(--success-ink, var(--role-success));
+  --color-success-soft: var(
+    --success-soft,
+    color-mix(in oklab, var(--role-success) 8%, var(--role-paper))
+  );
+  --color-warning: var(--warning, var(--role-warning));
+  --color-warning-ink: var(--warning-ink, var(--role-warning));
+  --color-warning-soft: var(
+    --warning-soft,
+    color-mix(in oklab, var(--role-warning) 8%, var(--role-paper))
+  );
+  --color-info: var(--info, var(--role-accent));
+  --color-info-ink: var(--info-ink, var(--role-accent-ink));
+  --color-info-soft: var(
+    --info-soft,
+    color-mix(in oklab, var(--role-accent) 8%, var(--role-paper))
+  );
+  --color-focus-fill: var(
+    --focus-fill,
+    color-mix(in oklab, var(--role-focus) 10%, var(--role-surface))
+  );
+
+  --font-display: var(--role-font-display);
+
+  --radius-control: var(--role-radius-control);
+  --radius-panel: var(--role-radius-panel);
+  --radius-pill: var(--role-radius-pill);
+}
+
+@layer base {
+  :root {
+    /*
+     * Page grid: one centred column, opt-in per page through the page-column utility (the root
+     * layout leaves the viewport free for a full application shell). Header, headings, forms
+     * and lists all start on its leading edge. The gutter widens once the column has room to
+     * sit inside a margin.
+     */
+    --page-measure: 640px;
+    --page-gutter: var(--space-4);
+  }
+
+  @media (width >= 48rem) {
+    :root {
+      --page-gutter: var(--space-8);
+    }
+  }
+
+  html {
+    background-color: var(--role-paper);
+    color: var(--role-ink);
+    font-family: var(--role-font-body);
+    font-size: var(--text-md);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100dvh;
+  }
+
+  :where(a, button, [tabindex]):focus-visible {
+    outline: none;
+    background-color: --theme(--color-focus-fill);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility page-column {
+  width: 100%;
+  max-width: calc(var(--page-measure) + 2 * var(--page-gutter));
+  margin-inline: auto;
+  padding-inline: var(--page-gutter);
+}

@@ -1,0 +1,4 @@
+# Keep LF on every platform so Prettier's endOfLine check passes on Windows clones.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary

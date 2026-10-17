@@ -1,0 +1,30 @@
+{
+  "include": [
+    "**/*.{test,spec}.{js,jsx,ts,tsx,mjs,cjs}",
+    "**/{test,tests,__tests__,spec,specs}/**/*.{py,js,jsx,ts,tsx,mjs,cjs}",
+    "**/{test_*,*_test}.py",
+    "**/*_test.go",
+    "**/{fixtures,testdata}/**/*.{json,yaml,yml}",
+    "**/*.{md,mdx,psm1}"
+  ],
+  "exclude": [
+    "**/{node_modules,bower_components,oh_modules,vendor,.pnpm-store,.yarn,dist,.next,.nuxt,.svelte-kit,.astro,.turbo,.angular,.parcel-cache,.docusaurus}/**",
+    "**/{.venv,venv,site-packages,__pycache__,.tox,.mypy_cache,.pytest_cache,.ruff_cache,target,.gradle,.bundle,Pods,Carthage,.build,obj,.dart_tool,.terraform,.stack-work}/**",
+    "**/{__generated__,__snapshots__,.ipynb_checkpoints,.state,.local,.scratch,playwright-report,test-results}/**",
+    "**/coverage/lcov-report/**",
+    "**/*.generated.*",
+    "**/*.gen.go",
+    "**/*.pb.go",
+    "**/kitex_gen/**/*.go",
+    "**/*.capnp.{h,go,ts}",
+    "**/*_capnp.{rs,py}",
+    "**/{package-lock.json,pnpm-lock.yaml,npm-shrinkwrap.json}"
+  ],
+  "rules": [
+    {
+      "path": "**/*",
+      "merge_system_rule": true,
+      "rule": "House baseline. Apply on top of the file-type rules; report only concrete, reachable defects introduced or made reachable by this change.\n\n## Secrets\n- No hardcoded credentials, API keys, tokens, private URLs or connection strings. Flag a secret committed, logged, printed in a response, or shipped in a client bundle.\n- Credentials come from the environment or a secret manager, never from source.\n\n## Destructive operations\n- A delete, drop, truncate, overwrite, force-push or recursive removal must be targeted, guarded and reversible. Flag any that can affect more than the paths or rows the change owns.\n- A database write that destroys or rewrites existing data needs an explicit guard and a stated recovery path.\n\n## Trust boundaries\n- External input (request bodies, query parameters, files, third-party responses, model output) must be validated before it reaches a query, a shell, a filesystem path or rendered markup.\n\n## Failures\n- A swallowed error, an empty catch, or a fallback that hides a failure is a defect when the caller cannot distinguish success from failure.\n\n## Scope\n- Do not report pre-existing debt, formatting preferences, or speculative hardening."
+    }
+  ]
+}

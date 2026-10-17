@@ -1,0 +1,29 @@
+filters:
+  and:
+    - file.ext == "md"
+    - '!file.inFolder("Templates")'
+    - note.status == "draft"
+formulas:
+  edited: file.mtime.relative()
+properties:
+  file.name:
+    displayName: Name
+  note.type:
+    displayName: Type
+  note.description:
+    displayName: Description
+  formula.edited:
+    displayName: Edited
+views:
+  - type: table
+    name: Needs review
+    groupBy:
+      property: note.type
+      direction: ASC
+    order:
+      - file.name
+      - description
+      - formula.edited
+    sort:
+      - property: file.mtime
+        direction: DESC

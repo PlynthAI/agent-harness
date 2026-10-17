@@ -1,0 +1,3 @@
+interface:
+  display_name: "Orchestrate Work"
+  short_description: "Assign parallel work to agent roles and integrate it"

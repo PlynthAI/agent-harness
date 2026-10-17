@@ -1,0 +1,629 @@
+diff --git a/internal/llm/responses_client.go b/internal/llm/responses_client.go
+index a9272cb..ab1095d 100644
+--- a/internal/llm/responses_client.go
++++ b/internal/llm/responses_client.go
+@@ -6,12 +6,14 @@ package llm
+ import (
+ 	"context"
+ 	"fmt"
++	"slices"
+ 	"strings"
+ 	"time"
+ 
+ 	openai "github.com/openai/openai-go/v3"
+ 	openaiopt "github.com/openai/openai-go/v3/option"
+ 	"github.com/openai/openai-go/v3/packages/param"
++	"github.com/openai/openai-go/v3/packages/ssestream"
+ 	"github.com/openai/openai-go/v3/responses"
+ )
+ 
+@@ -118,18 +120,20 @@ func (c *OpenAIResponsesClient) CompletionsWithCtx(ctx context.Context, req Chat
+ 		opts = append(opts, openaiopt.WithHeader(k, v))
+ 	}
+ 	for k, v := range expandSessionKeyInBody(c.cfg.ExtraBody, sessionKey) {
+-		// This client is non-streaming: it calls Responses.New, which expects a
+-		// single JSON body. If a provider config sets extra_body.stream=true
+-		// (valid for the Chat Completions client, which switches to a streaming
+-		// path), forwarding it here makes the API answer with SSE and every
+-		// call fails to decode. Drop the key rather than forward it.
++		// NewStreaming owns the wire flag; only a boolean true opts into SSE.
+ 		if k == "stream" {
+ 			continue
+ 		}
+ 		opts = append(opts, openaiopt.WithJSONSet(k, v))
+ 	}
+ 
+-	sdkResp, err := c.sdk.Responses.New(ctx, params, opts...)
++	var sdkResp *responses.Response
++	streaming, _ := c.cfg.ExtraBody["stream"].(bool)
++	if streaming {
++		sdkResp, err = c.responsesStreaming(ctx, params, opts...)
++	} else {
++		sdkResp, err = c.sdk.Responses.New(ctx, params, opts...)
++	}
+ 	if err != nil {
+ 		return nil, withProviderErrorBody(err)
+ 	}
+@@ -143,6 +147,9 @@ func (c *OpenAIResponsesClient) CompletionsWithCtx(ctx context.Context, req Chat
+ 	switch sdkResp.Status {
+ 	case responses.ResponseStatusFailed, responses.ResponseStatusCancelled:
+ 		err = fmt.Errorf("openai-responses request did not complete: status=%s", sdkResp.Status)
++		if streaming {
++			err = fmt.Errorf("%w code=%s message=%s", err, sdkResp.Error.Code, sdkResp.Error.Message)
++		}
+ 	case responses.ResponseStatusQueued, responses.ResponseStatusInProgress:
+ 		err = fmt.Errorf("openai-responses returned non-terminal status=%s (background/async mode is not supported)", sdkResp.Status)
+ 	}
+@@ -159,6 +166,57 @@ func (c *OpenAIResponsesClient) CompletionsWithCtx(ctx context.Context, req Chat
+ 	return c.mapResponsesResponse(sdkResp), nil
+ }
+ 
++func (c *OpenAIResponsesClient) responsesStreaming(ctx context.Context, params responses.ResponseNewParams, opts ...openaiopt.RequestOption) (sdkResp *responses.Response, err error) {
++	defer func() {
++		if err != nil {
++			class, phase := classifyStreamError(err)
++			reviseAttempt(ctx, c.cfg.retryCollector, class, phase)
++		}
++	}()
++	stream := c.sdk.Responses.NewStreaming(ctx, params, opts...)
++	defer stream.Close()
++
++	var result responses.Response
++	var terminal bool
++	items := make(map[int64]responses.ResponseOutputItemUnion)
++streamEvents:
++	for stream.Next() {
++		event := stream.Current()
++		switch event.Type {
++		case "error":
++			return nil, &ssestream.StreamError{
++				Message: fmt.Sprintf("openai-responses stream error: code=%s message=%s", event.Code, event.Message),
++				Event:   ssestream.Event{Type: event.Type, Data: []byte(event.RawJSON())},
++			}
++		case "response.output_item.done":
++			items[event.OutputIndex] = event.Item
++		case "response.completed", "response.failed", "response.incomplete":
++			result = event.Response
++			terminal = true
++			break streamEvents
++		}
++	}
++	if err := stream.Err(); err != nil {
++		return nil, err
++	}
++	if !terminal {
++		return nil, &streamIntegrityError{reason: "ended before a terminal Responses event"}
++	}
++	// Some providers put replayable items only in output_item.done events.
++	// Keep those SDK values intact so ToParam can reuse their original JSON.
++	if len(result.Output) == 0 && len(items) > 0 {
++		indices := make([]int64, 0, len(items))
++		for index := range items {
++			indices = append(indices, index)
++		}
++		slices.Sort(indices)
++		for _, index := range indices {
++			result.Output = append(result.Output, items[index])
++		}
++	}
++	return &result, nil
++}
++
+ // buildResponsesParams converts the shared ChatRequest into Responses API
+ // parameters. Mapping notes:
+ //
+diff --git a/internal/llm/responses_client_test.go b/internal/llm/responses_client_test.go
+index a095330..6374e59 100644
+--- a/internal/llm/responses_client_test.go
++++ b/internal/llm/responses_client_test.go
+@@ -6,11 +6,16 @@ package llm
+ import (
+ 	"context"
+ 	"encoding/json"
++	"errors"
++	"fmt"
+ 	"io"
+ 	"net/http"
+ 	"net/http/httptest"
++	"strings"
+ 	"testing"
++	"time"
+ 
++	"github.com/openai/openai-go/v3/packages/ssestream"
+ 	"github.com/openai/openai-go/v3/responses"
+ )
+ 
+@@ -610,55 +615,350 @@ func TestOpenAIResponsesClient_EndToEnd(t *testing.T) {
+ 	}
+ }
+ 
+-// TestOpenAIResponsesClient_ExtraBodyStreamDropped verifies that an
+-// extra_body.stream=true (valid for the Chat Completions client) is NOT
+-// forwarded to the Responses API. Forwarding it makes the API answer with SSE
+-// while Responses.New expects a JSON body, breaking every call. Other
+-// extra_body keys must still be forwarded.
+-func TestOpenAIResponsesClient_ExtraBodyStreamDropped(t *testing.T) {
+-	var gotBody map[string]any
+-
++func TestOpenAIResponsesClient_StreamingNativeReplay(t *testing.T) {
++	requests := make(chan map[string]any, 2)
+ 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+-		raw, _ := io.ReadAll(r.Body)
+-		_ = json.Unmarshal(raw, &gotBody)
+-		w.Header().Set("Content-Type", "application/json")
+-		_, _ = w.Write([]byte(`{
+-			"id":"resp_stream",
+-			"object":"response",
+-			"model":"gpt-5.4",
+-			"status":"completed",
+-			"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"ok"}]}],
+-			"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}
+-		}`))
++		var body map[string]any
++		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
++			t.Errorf("decode request: %v", err)
++			http.Error(w, "invalid request", http.StatusBadRequest)
++			return
++		}
++		requests <- body
++		if body["stream"] != true {
++			http.Error(w, "stream must be true", http.StatusBadRequest)
++			return
++		}
++		writeResponsesSSE(w,
++			`{"type":"response.created","response":{"id":"resp_stream","status":"in_progress","output":[]}}`,
++			`{"type":"response.output_item.added","output_index":1,"item":{"id":"msg_stream","type":"message","role":"assistant","status":"in_progress","content":[]}}`,
++			`{"type":"response.output_item.done","output_index":2,"item":{"id":"fc_stream","type":"function_call","status":"completed","call_id":"call_stream","name":"read_file","arguments":"{\"path\":\"main.go\"}"}}`,
++			`{"type":"response.output_item.done","output_index":0,"item":{"id":"rs_stream","type":"reasoning","summary":[{"type":"summary_text","text":"inspect the source"}],"encrypted_content":"encrypted-native-state"}}`,
++			`{"type":"response.output_item.done","output_index":1,"item":{"id":"msg_stream","type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Reading the file.","annotations":[]}]}}`,
++			`{"type":"response.completed","response":{"id":"resp_stream","object":"response","model":"gpt-6.1","status":"completed","output":[],"usage":{"input_tokens":12,"input_tokens_details":{"cached_tokens":4},"output_tokens":5,"total_tokens":17}}}`,
++		)
+ 	}))
+ 	defer server.Close()
+ 
+ 	client := NewOpenAIResponsesClient(ClientConfig{
+-		URL:    server.URL + "/v1",
+-		APIKey: "test-key",
+-		Model:  "gpt-5.4",
+-		ExtraBody: map[string]any{
+-			"stream":               true,
+-			"keep_me":              "yes",
+-			"temperature_override": 0.1,
+-		},
++		URL: server.URL + "/v1", APIKey: "test-key", Model: "gpt-6.1",
++		ExtraBody: map[string]any{"stream": true, "keep_me": "yes"},
+ 	})
+-
+ 	resp, err := client.CompletionsWithCtx(context.Background(), ChatRequest{
+-		Messages: []Message{{Role: "user", Content: "hi"}},
++		Messages: []Message{{Role: "user", Content: "review main.go"}}, MaxTokens: 2048,
+ 	})
+ 	if err != nil {
+ 		t.Fatalf("CompletionsWithCtx: %v", err)
+ 	}
++	body := <-requests
++	if body["stream"] != true || body["keep_me"] != "yes" || body["max_output_tokens"] != float64(2048) {
++		t.Errorf("stream request options = %v", body)
++	}
++	if resp.Content() != "Reading the file." || resp.ID != "resp_stream" || resp.Model != "gpt-6.1" {
++		t.Errorf("stream response = %+v", resp)
++	}
++	if resp.Usage == nil || resp.Usage.PromptTokens != 12 || resp.Usage.CompletionTokens != 5 || resp.Usage.CacheReadTokens != 4 || resp.Usage.TotalTokens != 17 {
++		t.Errorf("stream usage = %+v", resp.Usage)
++	}
++	message := resp.Choices[0].Message
++	if message.ReasoningContent != "inspect the source" || resp.Choices[0].FinishReason != "tool_calls" {
++		t.Errorf("stream choice = %+v", resp.Choices[0])
++	}
++	if len(message.ToolCalls) != 1 || message.ToolCalls[0].ID != "call_stream" || message.ToolCalls[0].Function.Name != "read_file" || message.ToolCalls[0].Function.Arguments != `{"path":"main.go"}` {
++		t.Fatalf("stream tool calls = %+v", message.ToolCalls)
++	}
++	if message.Native.Family != "openai-responses" {
++		t.Fatalf("stream native family = %q", message.Native.Family)
++	}
++	_, err = client.CompletionsWithCtx(context.Background(), ChatRequest{
++		Messages: []Message{
++			{Role: "user", Content: "review main.go"},
++			{Role: "assistant", Content: resp.Content(), ToolCalls: message.ToolCalls, Native: message.Native},
++			{Role: "tool", ToolCallID: "call_stream", Content: "package main"},
++		},
++	})
++	if err != nil {
++		t.Fatalf("replay CompletionsWithCtx: %v", err)
++	}
++	replay := <-requests
++	input, ok := replay["input"].([]any)
++	if !ok || len(input) != 5 {
++		t.Fatalf("replay input = %v", replay["input"])
++	}
++	reasoning := input[1].(map[string]any)
++	outputMessage := input[2].(map[string]any)
++	functionCall := input[3].(map[string]any)
++	result := input[4].(map[string]any)
++	if reasoning["type"] != "reasoning" || reasoning["id"] != "rs_stream" || reasoning["encrypted_content"] != "encrypted-native-state" {
++		t.Errorf("replayed reasoning = %v", reasoning)
++	}
++	if outputMessage["type"] != "message" || outputMessage["id"] != "msg_stream" || outputMessage["status"] != "completed" {
++		t.Errorf("replayed message = %v", outputMessage)
++	}
++	if functionCall["type"] != "function_call" || functionCall["id"] != "fc_stream" || functionCall["call_id"] != "call_stream" || functionCall["arguments"] != `{"path":"main.go"}` {
++		t.Errorf("replayed function call = %v", functionCall)
++	}
++	if result["type"] != "function_call_output" || result["call_id"] != "call_stream" || result["output"] != "package main" {
++		t.Errorf("replayed tool result = %v", result)
++	}
++}
++
++func TestOpenAIResponsesClient_StreamingRequiresTerminal(t *testing.T) {
++	for _, doneMarker := range []bool{false, true} {
++		t.Run(fmt.Sprintf("done_marker_%t", doneMarker), func(t *testing.T) {
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++				writeResponsesSSE(w,
++					`{"type":"response.created","response":{"id":"resp_cutoff","status":"in_progress","output":[]}}`,
++					`{"type":"response.output_item.done","output_index":0,"item":{"id":"msg_cutoff","type":"message","role":"assistant","status":"completed","content":[{"type":"output_text","text":"partial output"}]}}`,
++				)
++				if doneMarker {
++					_, _ = io.WriteString(w, "data: [DONE]\n\n")
++				}
++			}))
++			defer server.Close()
++			collector := NewRetryCollector()
++			meta := testMeta()
++			client := NewOpenAIResponsesClient(ClientConfig{
++				URL: server.URL, Model: "gpt-6.1", ExtraBody: map[string]any{"stream": true}, retryCollector: collector,
++			})
++			resp, err := client.CompletionsWithCtx(metaCtx(meta), ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++			var integrityErr *streamIntegrityError
++			if resp != nil || !errors.As(err, &integrityErr) {
++				t.Fatalf("response/error = %v / %v, want nil response and incomplete-stream error", resp, err)
++			}
++			attempts := attemptsFor(t, collector, meta)
++			if len(attempts) != 1 || attempts[0].Outcome != AttemptError || attempts[0].StatusCode != http.StatusOK || attempts[0].ErrorClass != ErrorClassProvider || attempts[0].FailurePhase != FailurePhaseStream {
++				t.Errorf("incomplete stream attempts = %+v", attempts)
++			}
++			if request := freezeOne(t, collector); request.Outcome != OutcomeFailed {
++				t.Errorf("incomplete stream request outcome = %s", request.Outcome)
++			}
++		})
++	}
++}
++
++func TestOpenAIResponsesClient_StreamingTerminalDiagnostics(t *testing.T) {
++	for _, status := range []string{"failed", "incomplete"} {
++		t.Run(status, func(t *testing.T) {
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++				writeResponsesSSE(w,
++					`{"type":"response.output_item.done","output_index":0,"item":{"id":"msg_diagnostic","type":"message","role":"assistant","status":"incomplete","content":[{"type":"output_text","text":"partial output"}]}}`,
++					fmt.Sprintf(`{"type":"response.%s","response":{"id":"resp_diagnostic","object":"response","model":"gpt-6.1","status":%q,"output":[],"error":{"code":"server_error","message":"provider diagnostic"},"incomplete_details":{"reason":"max_output_tokens"},"usage":{"input_tokens":12,"output_tokens":2048,"total_tokens":2060}}}`, status, status),
++				)
++			}))
++			defer server.Close()
++			collector := NewRetryCollector()
++			meta := testMeta()
++			client := NewOpenAIResponsesClient(ClientConfig{
++				URL: server.URL, Model: "gpt-6.1", ExtraBody: map[string]any{"stream": true}, retryCollector: collector,
++			})
++			resp, err := client.CompletionsWithCtx(metaCtx(meta), ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++			if status == "failed" {
++				if resp != nil || err == nil || !strings.Contains(err.Error(), "status=failed") || !strings.Contains(err.Error(), "server_error") || !strings.Contains(err.Error(), "provider diagnostic") {
++					t.Fatalf("failed response/error = %v / %v, want provider terminal diagnostics", resp, err)
++				}
++				attempts := attemptsFor(t, collector, meta)
++				if len(attempts) != 1 || attempts[0].Outcome != AttemptError || attempts[0].ErrorClass != ErrorClassProvider || attempts[0].FailurePhase != FailurePhaseResponseStatus {
++					t.Errorf("failed response attempts = %+v", attempts)
++				}
++				if request := freezeOne(t, collector); request.Outcome != OutcomeFailed {
++					t.Errorf("failed request outcome = %s", request.Outcome)
++				}
++				return
++			}
++			if err != nil || resp == nil {
++				t.Fatalf("incomplete response/error = %v / %v", resp, err)
++			}
++			if resp.Choices[0].FinishReason != "length" || resp.Content() != "partial output" || resp.Usage == nil || resp.Usage.CompletionTokens != 2048 {
++				t.Errorf("incomplete diagnostic response = %+v", resp)
++			}
++		})
++	}
++}
++
++func TestOpenAIResponsesClient_StreamingMidStreamErrors(t *testing.T) {
++	cases := []struct {
++		name, event, message string
++		class                ErrorClass
++	}{
++		{"typed provider error", `{"type":"error","code":"server_error","message":"stream provider diagnostic"}`, "stream provider diagnostic", ErrorClassProvider},
++		{"wrapped provider error", `{"error":{"code":"server_error","message":"wrapped provider diagnostic"}}`, "wrapped provider diagnostic", ErrorClassProvider},
++		{"malformed event", `{"type":`, "", ErrorClassUnknown},
++	}
++	for _, tc := range cases {
++		t.Run(tc.name, func(t *testing.T) {
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
++				writeResponsesSSE(w,
++					`{"type":"response.output_item.done","output_index":0,"item":{"id":"msg_error","type":"message","role":"assistant","content":[{"type":"output_text","text":"discard this output"}]}}`,
++					tc.event,
++				)
++			}))
++			defer server.Close()
++			collector := NewRetryCollector()
++			meta := testMeta()
++			client := NewOpenAIResponsesClient(ClientConfig{
++				URL: server.URL, Model: "gpt-6.1", ExtraBody: map[string]any{"stream": true}, retryCollector: collector,
++			})
++			resp, err := client.CompletionsWithCtx(metaCtx(meta), ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++			if resp != nil || err == nil {
++				t.Fatalf("response/error = %v / %v, want nil response and stream error", resp, err)
++			}
++			if tc.message != "" {
++				var streamErr *ssestream.StreamError
++				if !errors.As(err, &streamErr) || !strings.Contains(err.Error(), tc.message) {
++					t.Errorf("provider stream error = %T / %v", err, err)
++				}
++			} else {
++				var syntaxErr *json.SyntaxError
++				if !errors.As(err, &syntaxErr) {
++					t.Errorf("malformed event error = %T / %v", err, err)
++				}
++			}
++			attempts := attemptsFor(t, collector, meta)
++			if len(attempts) != 1 || attempts[0].Outcome != AttemptError || attempts[0].ErrorClass != tc.class || attempts[0].FailurePhase != FailurePhaseStream {
++				t.Errorf("stream error attempts = %+v", attempts)
++			}
++			if request := freezeOne(t, collector); request.Outcome != OutcomeFailed {
++				t.Errorf("stream error request outcome = %s", request.Outcome)
++			}
++		})
++	}
++}
+ 
+-	if _, present := gotBody["stream"]; present {
+-		t.Errorf("request body should NOT contain a stream field, got %v", gotBody["stream"])
++func TestOpenAIResponsesClient_StreamingCancellation(t *testing.T) {
++	opened := make(chan struct{})
++	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		writeResponsesSSE(w, `{"type":"response.output_item.done","output_index":0,"item":{"id":"msg_cancel","type":"message","role":"assistant","content":[{"type":"output_text","text":"discard partial output"}]}}`)
++		w.(http.Flusher).Flush()
++		close(opened)
++		<-r.Context().Done()
++	}))
++	defer server.Close()
++	collector := NewRetryCollector()
++	meta := testMeta()
++	ctx, cancel := context.WithCancel(metaCtx(meta))
++	defer cancel()
++	client := NewOpenAIResponsesClient(ClientConfig{
++		URL: server.URL, Model: "gpt-6.1", ExtraBody: map[string]any{"stream": true}, retryCollector: collector,
++	})
++	type result struct {
++		resp *ChatResponse
++		err  error
++	}
++	finished := make(chan result, 1)
++	go func() {
++		resp, err := client.CompletionsWithCtx(ctx, ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++		finished <- result{resp, err}
++	}()
++	select {
++	case <-opened:
++	case <-time.After(5 * time.Second):
++		t.Fatal("stream did not open")
++	}
++	cancel()
++	select {
++	case got := <-finished:
++		if got.resp != nil || !errors.Is(got.err, context.Canceled) {
++			t.Fatalf("cancelled response/error = %v / %v", got.resp, got.err)
++		}
++	case <-time.After(5 * time.Second):
++		t.Fatal("cancelled stream did not return")
+ 	}
+-	if gotBody["keep_me"] != "yes" {
+-		t.Errorf("other extra_body keys must still be forwarded; keep_me = %v", gotBody["keep_me"])
++	attempts := attemptsFor(t, collector, meta)
++	if len(attempts) != 1 || attempts[0].Outcome != AttemptError || attempts[0].ErrorClass != ErrorClassCancelled || attempts[0].FailurePhase != FailurePhaseContext {
++		t.Errorf("cancelled stream attempts = %+v", attempts)
+ 	}
+-	if resp.Content() != "ok" {
+-		t.Errorf("Content() = %q, want %q", resp.Content(), "ok")
++	if request := freezeOne(t, collector); request.Outcome != OutcomeCancelled {
++		t.Errorf("cancelled stream request outcome = %s", request.Outcome)
++	}
++}
++
++func TestOpenAIResponsesClient_StreamOptInRequiresBooleanTrue(t *testing.T) {
++	for _, streamOption := range []any{nil, false, "true", 1} {
++		t.Run(fmt.Sprintf("%v", streamOption), func(t *testing.T) {
++			requests := make(chan map[string]any, 1)
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				var body map[string]any
++				_ = json.NewDecoder(r.Body).Decode(&body)
++				requests <- body
++				w.Header().Set("Content-Type", "application/json")
++				_, _ = io.WriteString(w, `{"id":"resp_json","model":"muse","status":"completed","output":[{"id":"msg_json","type":"message","role":"assistant","content":[{"type":"output_text","text":"json response"}]}]}`)
++			}))
++			defer server.Close()
++			client := NewOpenAIResponsesClient(ClientConfig{
++				URL: server.URL, Model: "muse", ExtraBody: map[string]any{"stream": streamOption, "keep_me": "yes"},
++			})
++			resp, err := client.CompletionsWithCtx(context.Background(), ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++			if err != nil || resp == nil || resp.Content() != "json response" {
++				t.Fatalf("non-stream response/error = %v / %v", resp, err)
++			}
++			body := <-requests
++			if _, exists := body["stream"]; exists || body["keep_me"] != "yes" {
++				t.Errorf("non-stream request options = %v", body)
++			}
++		})
++	}
++}
++
++func TestOpenAIResponsesClient_StreamingReturnsOnTerminal(t *testing.T) {
++	for _, status := range []string{"completed", "incomplete", "failed"} {
++		t.Run(status, func(t *testing.T) {
++			terminalSent := make(chan struct{})
++			connectionClosed := make(chan struct{})
++			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++				writeResponsesSSE(w,
++					fmt.Sprintf(`{"type":"response.%s","response":{"id":"resp_terminal","model":"gpt-6.1","status":%q,"output":[{"id":"msg_terminal","type":"message","role":"assistant","content":[{"type":"output_text","text":"terminal output"}]}],"error":{"code":"server_error","message":"terminal failure"},"incomplete_details":{"reason":"max_output_tokens"}}}`, status, status),
++				)
++				w.(http.Flusher).Flush()
++				close(terminalSent)
++				<-r.Context().Done()
++				close(connectionClosed)
++			}))
++			defer server.Close()
++			ctx, cancel := context.WithCancel(context.Background())
++			defer cancel()
++			client := NewOpenAIResponsesClient(ClientConfig{
++				URL: server.URL, Model: "gpt-6.1", ExtraBody: map[string]any{"stream": true},
++			})
++			type result struct {
++				resp *ChatResponse
++				err  error
++			}
++			finished := make(chan result, 1)
++			go func() {
++				resp, err := client.CompletionsWithCtx(ctx, ChatRequest{Messages: []Message{{Role: "user", Content: "ping"}}})
++				finished <- result{resp, err}
++			}()
++			select {
++			case <-terminalSent:
++			case <-time.After(5 * time.Second):
++				t.Fatal("terminal event did not arrive")
++			}
++			select {
++			case got := <-finished:
++				if status == "failed" {
++					if got.resp != nil || got.err == nil || !strings.Contains(got.err.Error(), "terminal failure") {
++						t.Fatalf("failed terminal result = %v / %v", got.resp, got.err)
++					}
++				} else if got.err != nil || got.resp == nil || got.resp.Content() != "terminal output" {
++					t.Fatalf("terminal result = %v / %v", got.resp, got.err)
++				}
++			case <-time.After(2 * time.Second):
++				t.Fatal("client waited for EOF after terminal event")
++			}
++			select {
++			case <-connectionClosed:
++			case <-time.After(2 * time.Second):
++				t.Fatal("client left terminal stream connection open")
++			}
++		})
++	}
++}
++
++func writeResponsesSSE(w http.ResponseWriter, events ...string) {
++	w.Header().Set("Content-Type", "text/event-stream")
++	for _, event := range events {
++		_, _ = fmt.Fprintf(w, "data: %s\n\n", event)
+ 	}
+ }
+ 
+diff --git a/scripts/update.js b/scripts/update.js
+index bf8846e..eae1c32 100644
+--- a/scripts/update.js
++++ b/scripts/update.js
+@@ -137,6 +137,11 @@ async function main() {
+ 
+     const installedVersion = getInstalledVersion(resolved.path);
+     if (!installedVersion) return;
++    // npm releases cannot preserve the local Responses streaming patch.
++    if (installedVersion.endsWith("+sol-streaming")) {
++      removeHint();
++      return;
++    }
+ 
+     const pkg = loadPackageJson();
+     const latestVersion = await fetchLatestVersion(pkg);
+diff --git a/scripts/version.test.js b/scripts/version.test.js
+index fe18aa3..aee5e77 100644
+--- a/scripts/version.test.js
++++ b/scripts/version.test.js
+@@ -38,3 +38,87 @@ assert.strictEqual(shouldShowUpdateHint("1.8.7", "not-a-version"), false);
+ assert.strictEqual(shouldShowUpdateHint("1.8.6+new", "1.8.6+old"), false);
+ 
+ console.log("version tests passed");
++
++const fs = require("fs");
++const path = require("path");
++const vm = require("vm");
++const { EventEmitter } = require("events");
++
++async function runUpdater(installedVersion, latestVersion) {
++  const hintPath = path.join("/fixture-home", ".opencodereview", "update-available");
++  const lockPath = path.join("/fixture-home", ".opencodereview", "update.lock");
++  const files = new Map([[hintPath, "stale update hint"]]);
++  const installs = [];
++  const fetches = [];
++  const mocks = {
++    fs: {
++      mkdirSync() {},
++      utimesSync() {},
++      readFileSync(file) { return files.get(file); },
++      writeFileSync(file, value) { files.set(file, value); },
++      unlinkSync(file) { files.delete(file); },
++    },
++    path,
++    os: { homedir: () => "/fixture-home" },
++    https: {
++      get(url, options, callback) {
++        fetches.push(url);
++        const request = new EventEmitter();
++        request.destroy = () => {};
++        queueMicrotask(() => {
++          const response = new EventEmitter();
++          response.statusCode = 200;
++          response.resume = () => {};
++          callback(response);
++          response.emit("data", JSON.stringify({ version: latestVersion }));
++          response.emit("end");
++        });
++        return request;
++      },
++    },
++    child_process: {
++      spawnSync(command, args) {
++        if (command === "/fixture/ocr.exe") {
++          return { status: 0, stdout: `open-code-review v${installedVersion} (a758d9c) windows/amd64` };
++        }
++        installs.push([command, Array.from(args)]);
++        return { status: 0 };
++      },
++    },
++    "./platform": { resolveNativeBinary: () => ({ path: "/fixture/ocr.exe" }) },
++    "./install.js": { loadPackageJson: () => ({ name: "@alibaba-group/open-code-review" }) },
++    "./version": require("./version"),
++  };
++  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "update.js"), "utf8"), {
++    require(name) {
++      assert.ok(Object.prototype.hasOwnProperty.call(mocks, name), `unexpected module: ${name}`);
++      return mocks[name];
++    },
++    process: { pid: 123, platform: process.platform },
++  }, { filename: "update.js" });
++  await new Promise(setImmediate);
++  assert.strictEqual(files.has(lockPath), false, "updater must release its lock");
++  return { installs, fetches, hasHint: files.has(hintPath) };
++}
++
++async function testUpdaterBuildProtection() {
++  for (const installedVersion of ["1.12.11", "1.12.11+vendor.1"]) {
++    const result = await runUpdater(installedVersion, "1.12.12");
++    assert.deepStrictEqual(result.installs, [["npm", ["i", "-g", "@alibaba-group/open-code-review@1.12.12"]]],
++      "ordinary builds must retain automatic npm updates");
++    assert.strictEqual(result.hasHint, false, "successful install must clear a stale hint");
++  }
++  const unchanged = await runUpdater("1.12.11", "1.12.11");
++  assert.deepStrictEqual(unchanged.installs, [], "current stock release must not reinstall itself");
++
++  const custom = await runUpdater("1.12.11+sol-streaming", "1.12.12");
++  assert.deepStrictEqual(custom.installs, [], "updater must preserve the local Sol streaming build");
++  assert.deepStrictEqual(custom.fetches, [], "protected local build must skip registry polling");
++  assert.strictEqual(custom.hasHint, false, "protected local build must clear an obsolete stock-update hint");
++  console.log("updater custom-build tests passed");
++}
++
++testUpdaterBuildProtection().catch((error) => {
++  console.error(error);
++  process.exitCode = 1;
++});

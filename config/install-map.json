@@ -1,0 +1,118 @@
+{
+  "release": 1,
+  "created": "2026-09-17",
+  "description": "Shared Codex harness: user-level instructions, hand-authored roles, shared method skills and the principles and patterns library beside them, the compaction reload hook and user-level hooks.json lifecycle registrations, plus Open Code Review's house rule file, the one entry with its own home. Operator approval history and optional hook modules are not copied. An engine entry pins a binary the deploy fetches once into its shipped skill, verified against the recorded SHA-256. A tools entry pins a global npm CLI that the cloud setup installs and config/doctor.ps1 checks; the deploy ignores it.",
+  "defaultTarget": ".codex",
+  "sourceRoot": "..",
+  "mappings": [
+    {
+      "source": "AGENTS.md",
+      "target": "AGENTS.md",
+      "kind": "file"
+    },
+    {
+      "source": "THIRD_PARTY_NOTICES.md",
+      "target": "THIRD_PARTY_NOTICES.md",
+      "kind": "file"
+    },
+    {
+      "source": "agents",
+      "target": "agents",
+      "kind": "dir",
+      "include": [
+        "*.toml",
+        "*.md"
+      ],
+      "exclude": [
+        "router-model-*.toml"
+      ]
+    },
+    {
+      "source": "skills",
+      "target": "skills",
+      "kind": "dir",
+      "exclude": [
+        "*__pycache__*",
+        "*.pyc",
+        "*node_modules*",
+        "design[\\/]impeccable[\\/]scripts[\\/]bin[\\/]*"
+      ]
+    },
+    {
+      "source": "principles-and-patterns",
+      "target": "principles-and-patterns",
+      "kind": "dir"
+    },
+    {
+      "source": "hooks/compact-reload.ps1",
+      "target": "hooks/compact-reload.ps1",
+      "kind": "file"
+    },
+    {
+      "source": "hooks/hooks.json",
+      "target": "hooks.json",
+      "kind": "file"
+    },
+    {
+      "source": "config/ocr/rule.json",
+      "target": "rule.json",
+      "kind": "file",
+      "home": "%USERPROFILE%\\.opencodereview"
+    }
+  ],
+  "engines": [
+    {
+      "name": "impeccable",
+      "version": "0.1.5",
+      "skill": "skills/design/impeccable",
+      "versionFile": "scripts/VERSION",
+      "target": "scripts/bin/{platform}/impeccable{exe}",
+      "base": "https://github.com/pbakaus/impeccable/releases/download",
+      "asset": "engine-v{version}/impeccable-{platform}{exe}",
+      "sha256": {
+        "windows-x64": "477e544fc8880a5e82e427490cb9a5f5adab480c0e02966d33fd50772b531c71",
+        "darwin-arm64": "0d48b6e16aa97664fdbe607d5da9ae320e389a1843e0ff1328f8c2530530320d",
+        "darwin-x64": "153971b0c00719dff9ebac13370cb7dbbbe12838b696fbaf3f7ab0b1b3726b52",
+        "linux-x64": "cf5231a4b1ae66996c85b033800b1dad0797e590eae2f21ef2579430af187f19",
+        "linux-arm64": "bc4fa28bc8ccbb018795a99a4ece95ada898a6f1885f14281389d0e6ef2a2f98"
+      }
+    }
+  ],
+  "tools": [
+    {
+      "command": "ast-grep",
+      "package": "@ast-grep/cli",
+      "version": "0.51.0"
+    },
+    {
+      "command": "playwright-cli",
+      "package": "@playwright/cli",
+      "version": "0.1.22"
+    }
+  ],
+  "neverInstalled": [
+    "claude/**",
+    "harness-docs/**",
+    "harness-docs-starter/**",
+    "wip-harness-inbox/**",
+    "PROJECT.md",
+    ".local/**",
+    "workspace/**",
+    "workspace-seed/**",
+    "checks/**",
+    "config/**",
+    "README.md",
+    ".gitignore",
+    "site/**"
+  ],
+  "notVersioned": [
+    "config.toml",
+    "agents/router-model-*.toml",
+    "codex-router/**",
+    "auth.json",
+    "secrets/**",
+    ".sandbox-secrets/**",
+    "sessions/**",
+    "*.sqlite"
+  ]
+}

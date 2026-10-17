@@ -1,0 +1,4 @@
+# Keep the source byte-identical on checkout so an install is reproducible.
+* text=auto eol=lf
+*.png binary
+*.pyc binary

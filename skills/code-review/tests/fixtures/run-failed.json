@@ -1,0 +1,132 @@
+{
+  "status": "failed",
+  "llm": {
+    "provider": "openrouter",
+    "model": "google/gemini-3.8-flash"
+  },
+  "message": "Review failed: 0 finding(s); 3 of 3 selected item(s) failed.",
+  "summary": {
+    "files_reviewed": 3,
+    "comments": 0,
+    "total_tokens": 142647,
+    "input_tokens": 127202,
+    "output_tokens": 15445,
+    "cache_read_tokens": 63092,
+    "elapsed": "1m51s",
+    "budget_exceeded": true
+  },
+  "tool_calls": {
+    "total": 8,
+    "by_tool": {
+      "code_search": 1,
+      "file_read": 6,
+      "file_read_diff": 1
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": null,
+  "groups": [
+    {
+      "label": "checks/install-recovery.ps1",
+      "files": [
+        "checks/install-recovery.ps1"
+      ]
+    },
+    {
+      "label": "checks/install.ps1",
+      "files": [
+        "checks/install.ps1"
+      ]
+    },
+    {
+      "label": "checks/run-all.ps1",
+      "files": [
+        "checks/run-all.ps1"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "file": "checks/install-recovery.ps1",
+      "message": "stopped group \"checks/install-recovery.ps1\" mid-review: used 127426 tokens exceeds budget 100000",
+      "type": "token_budget_reached"
+    },
+    {
+      "file": "checks/run-all.ps1",
+      "message": "stopped dispatch: used 127426 tokens + group estimate 25948 = projected 153374 exceeds budget 100000",
+      "type": "token_budget_reached"
+    }
+  ],
+  "session_id": "33153cf5-46ca-4488-8c53-84d4c8299a7b",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "33153cf5-46ca-4488-8c53-84d4c8299a7b",
+    "operation": "review",
+    "terminal_state": "failed",
+    "repository": {},
+    "input": {
+      "mode": "commit",
+      "requested_head": "0a3ab2c029805fe68b14ffa8e34fcc44678b4410",
+      "resolved_base": "acaff362877141e2c787e35531c40a230ef1d5e8",
+      "resolved_head": "0a3ab2c029805fe68b14ffa8e34fcc44678b4410",
+      "exact_range": "acaff362877141e2c787e35531c40a230ef1d5e8..0a3ab2c029805fe68b14ffa8e34fcc44678b4410",
+      "source_artifact_sha256": "0c43c7c3798bb803da1392c65dd6192429638899ba235314bd4b0e456302f450"
+    },
+    "execution": {
+      "ocr_version": "v1.12.7",
+      "provider": "openrouter",
+      "model": "google/gemini-3.8-flash",
+      "configured_concurrency": 1,
+      "rule_config_sha256": "fe1ddcdc6ef9774233cfcda52d9d3cac2a2a50be8d09cc77e2fa2749c0265193",
+      "runtime_config_sha256": "57434aee823b7f1bde692a10d052a8debc9cb28aea640a6aac1fa53903a90bf5"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "7252507209cc0fd5f04780b712c26408814e9af298d6ec8ddf19dac8d3362343",
+          "path": "checks/run-all.ps1",
+          "fingerprint": "0f4fd8771a0e3fdb8a6475536caa61364be553c60ee28cc7d6730f80568e55bd"
+        },
+        {
+          "item_id": "aa25469c529dc37689be1e92ee330552650a360d1247d25bf998cfc8f33ee17f",
+          "path": "checks/install.ps1",
+          "fingerprint": "243968dc1c6cf35e39cc5179d45f4efae59f9aa3d518175e6a78932f16cef19a"
+        },
+        {
+          "item_id": "fad9bbec0650d15f9ac17cf192ededb7ba7c257f696b6dff0bd59d7ea19a1648",
+          "path": "checks/install-recovery.ps1",
+          "fingerprint": "be1da2841c1d6bd632741a252327f265eac65977871faaa31bf21052023b1350"
+        }
+      ],
+      "completed": [],
+      "reused": [],
+      "failed": [
+        {
+          "item_id": "7252507209cc0fd5f04780b712c26408814e9af298d6ec8ddf19dac8d3362343",
+          "path": "checks/run-all.ps1",
+          "fingerprint": "0f4fd8771a0e3fdb8a6475536caa61364be553c60ee28cc7d6730f80568e55bd",
+          "classification": "budget",
+          "reason": "aggregate token budget reached before dispatch completed"
+        },
+        {
+          "item_id": "aa25469c529dc37689be1e92ee330552650a360d1247d25bf998cfc8f33ee17f",
+          "path": "checks/install.ps1",
+          "fingerprint": "243968dc1c6cf35e39cc5179d45f4efae59f9aa3d518175e6a78932f16cef19a",
+          "classification": "budget",
+          "reason": "reached the aggregate token budget before finishing"
+        },
+        {
+          "item_id": "fad9bbec0650d15f9ac17cf192ededb7ba7c257f696b6dff0bd59d7ea19a1648",
+          "path": "checks/install-recovery.ps1",
+          "fingerprint": "be1da2841c1d6bd632741a252327f265eac65977871faaa31bf21052023b1350",
+          "classification": "budget",
+          "reason": "reached the aggregate token budget before finishing"
+        }
+      ],
+      "waived": []
+    },
+    "elapsed_ms": 111126
+  }
+}

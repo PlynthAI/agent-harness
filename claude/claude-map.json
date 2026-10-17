@@ -1,0 +1,44 @@
+{
+  "description": "How Claude Code consumes the installed Codex harness on this host. Each key under roles is a Claude agent name bound either to a Claude model (model, effort), rendered from the Codex role file of the same name, or to the Codex runtime (runtime: codex), rendered as a forwarder that runs the Codex role named by role (default: the key) through `codex exec` (scripts/codex-forward.mjs), read-only unless write is true. Each name under folders is a whole installed Codex folder beside skills, linked into the Claude home under the same name so skills' relative links to it resolve. The Codex role files own names, descriptions and instructions, and for Codex-runtime roles also model and effort. Each hook script is copied from this folder, or from the source path (relative to this folder, inside the checkout) a hook shared with Codex names, into the Claude home and registered in its settings.json under the event, matcher and timeout (seconds) given here; each script under scripts is copied into the Claude home's scripts folder.",
+  "codexHome": "%USERPROFILE%\\.codex",
+  "claudeHome": "%USERPROFILE%\\.claude",
+  "instructions": {
+    "source": "user-CLAUDE.md",
+    "target": "CLAUDE.md"
+  },
+  "skills": {
+    "exclude": [".*", "codex-*"]
+  },
+  "folders": ["principles-and-patterns"],
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "matcher": "startup",
+      "script": "hooks/session-start-fresh-worktree.ps1",
+      "timeout": 15
+    },
+    {
+      "event": "SessionStart",
+      "script": "hooks/session-env-trim.ps1",
+      "timeout": 10
+    },
+    {
+      "event": "SessionStart",
+      "matcher": "compact",
+      "script": "hooks/compact-reload.ps1",
+      "source": "../hooks/compact-reload.ps1",
+      "timeout": 10
+    }
+  ],
+  "scripts": ["scripts/codex-forward.mjs"],
+  "roles": {
+    "smart_worker": { "model": "opus", "effort": "high" },
+    "fast_worker": { "model": "claude-sonnet-5-5", "effort": "high" },
+    "planner": { "model": "opus", "effort": "xhigh" },
+    "explorer": { "model": "claude-sonnet-5-5", "effort": "high" },
+    "researcher": { "model": "claude-sonnet-5-5", "effort": "high" },
+    "tester": { "model": "haiku", "effort": "xhigh" },
+    "fast_review": { "model": "haiku", "effort": "xhigh" },
+    "reviewer": { "runtime": "codex", "write": true }
+  }
+}

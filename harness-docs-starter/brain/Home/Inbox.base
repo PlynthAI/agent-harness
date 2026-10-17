@@ -1,0 +1,33 @@
+filters:
+  and:
+    - file.inFolder("Inbox")
+formulas:
+  added: file.ctime.relative()
+properties:
+  file.name:
+    displayName: Name
+  note.project:
+    displayName: Project
+  note.kind:
+    displayName: Kind
+  note.description:
+    displayName: Description
+  note.outcome:
+    displayName: Outcome
+  formula.added:
+    displayName: Added
+views:
+  - type: table
+    name: Inbox
+    groupBy:
+      property: note.project
+      direction: ASC
+    order:
+      - file.name
+      - kind
+      - description
+      - outcome
+      - formula.added
+    sort:
+      - property: file.ctime
+        direction: DESC

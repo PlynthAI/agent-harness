@@ -1,0 +1,42 @@
+---
+import type { CollectionEntry } from "astro:content"
+
+import BaseLayout from "@/layouts/BaseLayout.astro"
+import { formatDate } from "@/lib/articles"
+
+type Props = { article: CollectionEntry<"articles"> }
+
+const { article } = Astro.props
+const { title, description, published, updated } = article.data
+---
+
+<BaseLayout title={title} description={description} type="article" published={published}>
+  <article class="page-frame flex flex-col gap-10 pt-12 pb-20 md:pt-16">
+    <header class="flex flex-col gap-4 border-b border-line pb-10">
+      <p class="t-label-md">
+        <a href="/articles/" class="text-ink-2">
+          Articles
+        </a>
+      </p>
+      <h1 class="t-display-md font-heading md:t-size-display-lg max-w-[20ch] text-ink">{title}</h1>
+      <p class="t-body-lg max-w-(--measure) text-ink-2">{description}</p>
+      <p class="t-body-sm text-ink-3">
+        Published <time datetime={published.toISOString()}>{formatDate(published)}</time>
+        {updated && (
+          <>
+            {" "}
+            · Updated <time datetime={updated.toISOString()}>{formatDate(updated)}</time>
+          </>
+        )}
+      </p>
+    </header>
+    <div class="article-body">
+      <slot />
+    </div>
+    <footer class="border-t border-line pt-6">
+      <a href="/articles/" class="t-label-md">
+        Back to all articles
+      </a>
+    </footer>
+  </article>
+</BaseLayout>

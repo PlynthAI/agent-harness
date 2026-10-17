@@ -1,0 +1,21 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro"
+---
+
+<BaseLayout title="Page not found" description="There is no page at this address." noindex>
+  <section class="page-frame flex flex-col gap-6 pt-16 pb-24 md:pt-24">
+    <p class="t-label-md text-ink-3">Error 404</p>
+    <h1 class="t-display-md font-heading md:t-size-display-lg text-ink">Page not found</h1>
+    <p class="t-body-lg max-w-(--measure) text-ink-2">
+      There is no page at this address. It may have moved, or the link may have a typo.
+    </p>
+    <ul class="flex flex-wrap gap-x-6 gap-y-2">
+      <li>
+        <a href="/">Go to the home page</a>
+      </li>
+      <li>
+        <a href="/articles/">Browse the articles</a>
+      </li>
+    </ul>
+  </section>
+</BaseLayout>

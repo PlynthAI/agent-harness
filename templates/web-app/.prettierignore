@@ -1,0 +1,14 @@
+pnpm-lock.yaml
+.next/
+out/
+next-env.d.ts
+.cache/
+playwright-report/
+test-results/
+
+# Written by the harness copier from a design library profile (the Kit by default); replaced together with DESIGN.md.
+styles/design/
+
+# Root Markdown and docs carry the project-name placeholder, which Prettier would rewrite as bold; the copier fills it before any project formats.
+/*.md
+docs/

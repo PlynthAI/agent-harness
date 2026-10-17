@@ -1,0 +1,38 @@
+filters:
+  and:
+    - note.type == "goal"
+    - note.status != "deprecated"
+    - '!file.inFolder("Templates")'
+formulas:
+  horizon_order: if(note.horizon == "now", "1 now", if(note.horizon == "next", "2 next", if(note.horizon == "later", "3 later", "4 unset")))
+  workspace: if(file.inFolder("Workspaces"), file.folder.split("/")[1], "")
+properties:
+  file.name:
+    displayName: Goal
+  formula.horizon_order:
+    displayName: Horizon
+  note.area:
+    displayName: Area
+  formula.workspace:
+    displayName: Repository
+  note.status:
+    displayName: Status
+  note.description:
+    displayName: Description
+views:
+  - type: table
+    name: Roadmap
+    groupBy:
+      property: formula.horizon_order
+      direction: ASC
+    order:
+      - file.name
+      - area
+      - formula.workspace
+      - status
+      - description
+    sort:
+      - property: area
+        direction: ASC
+      - property: file.name
+        direction: ASC

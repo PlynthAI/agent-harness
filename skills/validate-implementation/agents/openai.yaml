@@ -1,0 +1,3 @@
+interface:
+  display_name: "Validation"
+  short_description: "Pick and record the checks that prove a change"

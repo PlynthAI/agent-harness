@@ -1,0 +1,106 @@
+{
+  "status": "failed",
+  "llm": {
+    "provider": "openrouter",
+    "model": "google/gemini-3.8-flash"
+  },
+  "message": "Review failed: 0 finding(s); 2 of 2 selected item(s) failed.",
+  "summary": {
+    "files_reviewed": 2,
+    "comments": 0,
+    "total_tokens": 118016,
+    "input_tokens": 115898,
+    "output_tokens": 2118,
+    "cache_read_tokens": 55394,
+    "elapsed": "52s",
+    "budget_exceeded": true
+  },
+  "tool_calls": {
+    "total": 8,
+    "by_tool": {
+      "code_search": 1,
+      "file_find": 1,
+      "file_read": 5,
+      "file_read_diff": 1
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": null,
+  "groups": [
+    {
+      "label": "small change set",
+      "files": [
+        "agents/planner.toml",
+        "checks/agents.ps1"
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "file": "agents/planner.toml",
+      "message": "stopped group \"agents/planner.toml,checks/agents.ps1\" mid-review: used 118016 tokens exceeds budget 100000",
+      "type": "token_budget_reached"
+    }
+  ],
+  "session_id": "9f16bd6f-e5a3-4d17-a7f7-c7c20255af2c",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "9f16bd6f-e5a3-4d17-a7f7-c7c20255af2c",
+    "operation": "review",
+    "terminal_state": "failed",
+    "repository": {},
+    "input": {
+      "mode": "range",
+      "requested_from": "2c1ebadb7ed3587e301935f3a2510500d8b71069",
+      "requested_head": "86b846df3484b8932cbe125283dfe7fd7cd47716",
+      "resolved_base": "2c1ebadb7ed3587e301935f3a2510500d8b71069",
+      "resolved_head": "86b846df3484b8932cbe125283dfe7fd7cd47716",
+      "exact_range": "2c1ebadb7ed3587e301935f3a2510500d8b71069..86b846df3484b8932cbe125283dfe7fd7cd47716",
+      "source_artifact_sha256": "e96d2125b8e642291e49043974530a9e7c7dfd12ada0cf732f0a7bdf027e580d"
+    },
+    "execution": {
+      "ocr_version": "v1.12.7",
+      "provider": "openrouter",
+      "model": "google/gemini-3.8-flash",
+      "configured_concurrency": 2,
+      "rule_config_sha256": "fe1ddcdc6ef9774233cfcda52d9d3cac2a2a50be8d09cc77e2fa2749c0265193",
+      "runtime_config_sha256": "726a010c788b2cb4c7a4082decf995a574ad01c59d1f87dc33237cc5b467d634"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "06e11a6cf1b9b4497320305d980d3e2a72efe5d6b7324d7b18cf5200e2958a81",
+          "path": "agents/planner.toml",
+          "fingerprint": "011db0b3ec4dacdbd41b19f2fa4bf60be37ed2db45c32755068682fa0e50f2fd"
+        },
+        {
+          "item_id": "41b760eda725078eab75a46c8b4ae19d7eec4c16b045f10e7642d40b3b5b0d34",
+          "path": "checks/agents.ps1",
+          "fingerprint": "7b668f56c2c100d55c320e4cee901272ad4670ff77804642e1d97fcc749f129c"
+        }
+      ],
+      "completed": [],
+      "reused": [],
+      "failed": [
+        {
+          "item_id": "06e11a6cf1b9b4497320305d980d3e2a72efe5d6b7324d7b18cf5200e2958a81",
+          "path": "agents/planner.toml",
+          "fingerprint": "011db0b3ec4dacdbd41b19f2fa4bf60be37ed2db45c32755068682fa0e50f2fd",
+          "classification": "budget",
+          "reason": "reached the aggregate token budget before finishing"
+        },
+        {
+          "item_id": "41b760eda725078eab75a46c8b4ae19d7eec4c16b045f10e7642d40b3b5b0d34",
+          "path": "checks/agents.ps1",
+          "fingerprint": "7b668f56c2c100d55c320e4cee901272ad4670ff77804642e1d97fcc749f129c",
+          "classification": "budget",
+          "reason": "reached the aggregate token budget before finishing"
+        }
+      ],
+      "waived": []
+    },
+    "elapsed_ms": 51513
+  }
+}

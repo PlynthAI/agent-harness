@@ -1,0 +1,3 @@
+interface:
+  display_name: "Automate Workflow"
+  short_description: "Automate recurring jobs with oversight and recovery"

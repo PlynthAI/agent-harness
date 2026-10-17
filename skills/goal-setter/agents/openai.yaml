@@ -1,0 +1,3 @@
+interface:
+  display_name: "Goal Setter"
+  short_description: "Draft or check a /goal with a clear finish line"

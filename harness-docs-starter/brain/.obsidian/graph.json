@@ -1,0 +1,67 @@
+{
+  "colorGroups": [
+    {
+      "query": "[type:inbox]",
+      "color": {
+        "a": 1,
+        "rgb": 15246141
+      }
+    },
+    {
+      "query": "[type:goal]",
+      "color": {
+        "a": 1,
+        "rgb": 5025616
+      }
+    },
+    {
+      "query": "[type:finding]",
+      "color": {
+        "a": 1,
+        "rgb": 2533018
+      }
+    },
+    {
+      "query": "path:Workspaces",
+      "color": {
+        "a": 1,
+        "rgb": 6065622
+      }
+    },
+    {
+      "query": "[type:source]",
+      "color": {
+        "a": 1,
+        "rgb": 10250974
+      }
+    },
+    {
+      "query": "[type:decision]",
+      "color": {
+        "a": 1,
+        "rgb": 14242639
+      }
+    },
+    {
+      "query": "[type:meeting]",
+      "color": {
+        "a": 1,
+        "rgb": 13214247
+      }
+    },
+    {
+      "query": "[type:sop]",
+      "color": {
+        "a": 1,
+        "rgb": 7901340
+      }
+    },
+    {
+      "query": "[type:content]",
+      "color": {
+        "a": 1,
+        "rgb": 14707871
+      }
+    }
+  ]
+}

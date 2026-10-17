@@ -1,0 +1,112 @@
+---
+import ArticleList from "@/components/ArticleList.astro"
+import { buttonVariants } from "@/components/ui/button"
+import BaseLayout from "@/layouts/BaseLayout.astro"
+import { publishedArticles } from "@/lib/articles"
+import { cn } from "@/lib/utils"
+
+const articles = await publishedArticles()
+const facts = [
+  { figure: articles.length, label: "articles, written in Markdown" },
+  { figure: 0, label: "scripts loaded by this page" },
+  { figure: 1, label: "interactive island, the contact form" },
+]
+const points = [
+  {
+    title: "Metadata that matches the page",
+    body: "Every page sets its own title, description, canonical link and Open Graph tags through one layout, and the sitemap lists every published page.",
+  },
+  {
+    title: "Content checked at build time",
+    body: "Articles are Markdown files whose front matter is checked by a schema. A missing description or a bad date stops the build instead of reaching readers.",
+  },
+  {
+    title: "Scripts only where they earn a place",
+    body: "Pages are rendered to HTML ahead of time. An interactive part, such as the contact form, loads on its own as an island and leaves the rest of the page alone.",
+  },
+]
+---
+
+<BaseLayout>
+  <section aria-labelledby="hero-title" class="page-frame pt-16 pb-12 md:pt-24 md:pb-16">
+    <div class="grid gap-6 md:grid-cols-12">
+      <div class="flex flex-col gap-6 md:col-span-10 lg:col-span-9">
+        <h1
+          id="hero-title"
+          class="t-display-md font-heading md:t-size-display-lg lg:t-size-display-xl text-ink"
+        >
+          A content site that ships pages, not scripts.
+        </h1>
+        <p class="t-body-lg max-w-(--measure)">
+          Every page here is plain HTML built ahead of time from Astro components and Markdown. The
+          one exception is the contact form, which loads a small React island to check your message.
+        </p>
+        <div class="flex flex-wrap gap-3">
+          <a href="/articles/" class={cn(buttonVariants({ size: "lg" }), "px-4 no-underline")}>
+            Read the articles
+          </a>
+          <a
+            href="/contact/"
+            class={cn(buttonVariants({ size: "lg", variant: "outline" }), "px-4 no-underline")}
+          >
+            Send a message
+          </a>
+        </div>
+      </div>
+    </div>
+    <dl class="mt-12 grid grid-cols-1 gap-6 border-t border-line pt-6 sm:grid-cols-3 md:mt-16">
+      {facts.map((fact) => (
+        <div class="flex flex-col gap-2">
+          <dt class="t-body-sm order-2 text-ink-2">{fact.label}</dt>
+          <dd class="t-numeral-md order-1 text-ink">{fact.figure}</dd>
+        </div>
+      ))}
+    </dl>
+  </section>
+
+  <section aria-labelledby="points-title" class="bg-surface py-16 md:py-20">
+    <div class="page-frame flex flex-col gap-10">
+      <h2 id="points-title" class="t-heading-lg max-w-[20ch] text-ink">
+        What every page carries
+      </h2>
+      <ul class="grid gap-x-6 gap-y-10 md:grid-cols-3">
+        {points.map((point) => (
+          <li class="flex flex-col gap-2 border-t border-ink pt-4">
+            <h3 class="t-title text-ink">{point.title}</h3>
+            <p class="t-body-md text-ink-2">{point.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="articles-title" class="page-frame flex flex-col gap-8 py-16 md:py-20">
+    <div class="flex flex-wrap items-baseline justify-between gap-4">
+      <h2 id="articles-title" class="t-heading-lg text-ink">
+        Latest articles
+      </h2>
+      <a href="/articles/" class="t-label-md">
+        All articles
+      </a>
+    </div>
+    <ArticleList articles={articles.slice(0, 4)} />
+  </section>
+
+  <section aria-labelledby="contact-title" class="border-t border-line">
+    <div class="page-frame grid gap-6 py-16 md:grid-cols-12 md:py-20">
+      <div class="flex flex-col gap-4 md:col-span-8">
+        <h2 id="contact-title" class="t-heading-lg text-ink">
+          A question about this site?
+        </h2>
+        <p class="t-body-lg max-w-(--measure) text-ink-2">
+          The contact form checks what you write and shows the reply a real handler would give.
+        </p>
+        <p>
+          <a href="/contact/" class={cn(buttonVariants({ size: "lg" }), "px-4 no-underline")}>
+            Go to the contact form
+          </a>
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Planner"
+  short_description: "Advise on architecture or write a grounded build plan"

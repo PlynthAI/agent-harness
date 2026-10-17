@@ -1,0 +1,3 @@
+# cmd.exe caps a command line at 8191 characters and the .CMD shims add their own paths, so
+# smaller file chunks keep a large commit (the first one, say) under the limit on Windows.
+lint-staged --no-stash --fail-on-changes --max-arg-length 7000

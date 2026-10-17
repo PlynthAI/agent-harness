@@ -1,0 +1,3 @@
+interface:
+  display_name: "Delivery"
+  short_description: "Commit, push, PR, merge or deploy: one authorised step"

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Inbox"
+  short_description: "File notes, links and bookmarks into the brain"

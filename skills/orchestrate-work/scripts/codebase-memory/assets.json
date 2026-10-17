@@ -1,0 +1,15 @@
+{
+  "repository": "DeusData/codebase-memory-mcp",
+  "archiveEntries": ["codebase-memory-mcp.exe", "LICENSE", "install.ps1", "THIRD_PARTY_NOTICES.md"],
+  "installedFiles": ["codebase-memory-mcp.exe", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "assets": {
+    "windows-amd64": {
+      "name": "codebase-memory-mcp-windows-amd64.zip",
+      "sha256": "6eb6beaf261b19e419766e78baf93cbc3cf1c6338cff8fb7c0234859f96d1685"
+    },
+    "windows-arm64": {
+      "name": "codebase-memory-mcp-windows-arm64.zip",
+      "sha256": "52b29881214fce47d529e098308b1de77c40f6812e20a34d588ee4c25b84fd1a"
+    }
+  }
+}

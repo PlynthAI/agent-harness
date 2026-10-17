@@ -1,0 +1,22 @@
+---
+import ArticleList from "@/components/ArticleList.astro"
+import BaseLayout from "@/layouts/BaseLayout.astro"
+import { publishedArticles } from "@/lib/articles"
+
+const articles = await publishedArticles()
+---
+
+<BaseLayout
+  title="Articles"
+  description="Short articles on how this site is built: writing content, page metadata and when a page needs JavaScript."
+>
+  <section class="page-frame flex flex-col gap-10 pt-12 pb-20 md:pt-16">
+    <header class="flex flex-col gap-4">
+      <h1 class="t-display-md font-heading md:t-size-display-lg text-ink">Articles</h1>
+      <p class="t-body-lg max-w-(--measure) text-ink-2">
+        Short pieces on how this site is built, newest first.
+      </p>
+    </header>
+    <ArticleList articles={articles} headingLevel={2} />
+  </section>
+</BaseLayout>

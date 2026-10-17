@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "task": "<task or change id>",
+  "candidate": "<commit, range or tree identity; an audit reference, not the reuse key>",
+  "profile": "<project profile path or name>",
+  "activatedProfiles": ["<docs | backend | frontend | mixed>"],
+  "identity": {
+    "project": "<project-issued: which project or repository this evidence covers>",
+    "contentIdentity": "<project-issued: the actual input set - in-scope content, deletions, untracked files, relevant callers, contracts and fixtures; for a review also scoped comparison-base content and scope mode>",
+    "dependencyIdentity": "<project-issued: the configuration, rules, selector, toolchain and check commands this run used>",
+    "environment": "<project-issued: a stable execution profile or target, not a machine nickname>",
+    "scope": "<the exact obligations this record covers>"
+  },
+  "rawOutput": "<artifacts path>",
+  "statusVocabulary": ["pass", "fail", "skipped", "unavailable", "cancelled", "not_run"],
+  "checks": [
+    {
+      "id": "<check id from the profile>",
+      "command": "<exact command>",
+      "cwd": "<working directory for this behavioral example>",
+      "required": true,
+      "status": "pass",
+      "detail": "<skip reason or link to native report; omit behavior for lint, type and docs checks>",
+      "behavior": {
+        "scenario": {
+          "id": "<stable scenario id>",
+          "requirement": "<accepted requirement or issue reference>",
+          "acceptedBehavior": "<the observable promise being checked>"
+        },
+        "definition": {
+          "test": "<versioned test path and case, or repeatable scenario definition>",
+          "setup": "<supported setup reference>",
+          "fixtures": ["<versioned fixture or data identity reference>"]
+        },
+        "inputs": "<material parameters; safe references, never raw credentials>",
+        "assertions": [
+          {
+            "expected": "<observable assertion from the versioned definition>",
+            "nativeCase": "<executed case/result locator in the native report; actual values only if captured>"
+          }
+        ],
+        "attachments": ["<relevant native case evidence, or omit when none is needed>"],
+        "limits": "<missing or unexercised coverage, or none>"
+      }
+    },
+    {
+      "id": "<quality kit tool, for example suppression-count>",
+      "command": "<exact command>",
+      "required": true,
+      "status": "pass",
+      "detail": "<link to raw output>",
+      "baseline": {
+        "file": "<baseline file the tool read>",
+        "before": "<entries or count in the committed baseline>",
+        "after": "<entries or count after this candidate>",
+        "new": "<entries the candidate added; a pass needs 0>",
+        "stale": "<entries the candidate fixed and the baseline dropped>"
+      }
+    }
+  ],
+  "deselected": "<checks or profiles considered and left out, and why>",
+  "unmappedPaths": [],
+  "reuse": {
+    "of": null
+  },
+  "outcome": "<qualified for the selected scope | not qualified>",
+  "nextRequiredAction": "<the broader check, review or delivery step still needed>"
+}

@@ -1,0 +1,46 @@
+---
+import type { CollectionEntry } from "astro:content"
+
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { formatDate } from "@/lib/articles"
+
+type Props = { articles: CollectionEntry<"articles">[]; headingLevel?: 2 | 3 }
+
+const { articles, headingLevel = 3 } = Astro.props
+const Heading = `h${headingLevel}` as const
+---
+
+{articles.length === 0 ? (
+  <p class="t-body-md text-ink-2">
+    No articles yet. Add a Markdown file to <code>src/content/articles/</code> to publish one.
+  </p>
+) : (
+  <ul class="grid gap-6 md:grid-cols-2">
+    {articles.map((article) => (
+      <li class="flex">
+        <Card className="relative w-full gap-3 transition-colors duration-(--duration-fast) hover:ring-line-strong has-[a:focus-visible]:ring-ink">
+          <CardHeader className="gap-2">
+            <CardTitle>
+              <Heading class="t-heading-sm">
+                <a
+                  href={`/articles/${article.id}/`}
+                  class="no-underline outline-none after:absolute after:inset-0 focus-visible:bg-transparent"
+                >
+                  {article.data.title}
+                </a>
+              </Heading>
+            </CardTitle>
+            <CardDescription className="text-base/[1.6] text-ink-2">
+              {article.data.description}
+            </CardDescription>
+          </CardHeader>
+          <CardFooter className="mt-auto border-line bg-transparent">
+            <time class="t-body-sm text-ink-3" datetime={article.data.published.toISOString()}>
+              {formatDate(article.data.published)}
+            </time>
+          </CardFooter>
+        </Card>
+      </li>
+    ))}
+  </ul>
+)}

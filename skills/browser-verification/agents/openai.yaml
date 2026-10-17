@@ -1,0 +1,3 @@
+interface:
+  display_name: "Browser Verification"
+  short_description: "Prove a UI change works in the running app"

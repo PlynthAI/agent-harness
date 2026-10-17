@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "^compact$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"Context was just compacted. Skill and reference text loaded earlier may be gone or cut short, and the summary is not the instructions. Before the next step, re-open the skill and references the work in progress uses. Then re-read .state/state.md at the root of this checkout, if it exists, and the plan if the task has one, and continue from the recorded next action.\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^(?:Edit|Write|apply_patch|mcp__drawing_tools__(?:get_render|check|snapshot))$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ ! -f \"${CODEX_HOME:-$HOME/.codex}/skills/design/drawing/scripts/post-drawing.mjs\" ] || node \"${CODEX_HOME:-$HOME/.codex}/skills/design/drawing/scripts/post-drawing.mjs\"",
+            "commandWindows": "powershell.exe -NoLogo -NoProfile -NonInteractive -OutputFormat Text -EncodedCommand JABFAHIAcgBvAHIAQQBjAHQAaQBvAG4AUAByAGUAZgBlAHIAZQBuAGMAZQA9ACcAUwB0AG8AcAAnADsAJABiAGEAcwBlAD0AJABlAG4AdgA6AEMATwBEAEUAWABfAEgATwBNAEUAOwBpAGYAKAAtAG4AbwB0ACAAJABiAGEAcwBlACkAewBpAGYAKAAtAG4AbwB0ACAAJABlAG4AdgA6AFUAUwBFAFIAUABSAE8ARgBJAEwARQApAHsAZQB4AGkAdAAgADAAfQA7ACQAYgBhAHMAZQA9ACQAZQBuAHYAOgBVAFMARQBSAFAAUgBPAEYASQBMAEUAKwAnAFwALgBjAG8AZABlAHgAJwB9ADsAJABmAD0AJABiAGEAcwBlACsAJwBcAHMAawBpAGwAbABzAFwAZABlAHMAaQBnAG4AXABkAHIAYQB3AGkAbgBnAFwAcwBjAHIAaQBwAHQAcwBcAHAAbwBzAHQALQBkAHIAYQB3AGkAbgBnAC4AbQBqAHMAJwA7AGkAZgAoAC0AbgBvAHQAIABbAEkATwAuAEYAaQBsAGUAXQA6ADoARQB4AGkAcwB0AHMAKAAkAGYAKQApAHsAZQB4AGkAdAAgADAAfQA7ACQAcwA9AFsARABpAGEAZwBuAG8AcwB0AGkAYwBzAC4AUAByAG8AYwBlAHMAcwBTAHQAYQByAHQASQBuAGYAbwBdADoAOgBuAGUAdwAoACkAOwAkAHMALgBGAGkAbABlAE4AYQBtAGUAPQAnAG4AbwBkAGUAJwA7ACQAcwAuAEEAcgBnAHUAbQBlAG4AdABzAD0AJwAiACcAKwAkAGYAKwAnACIAJwA7ACQAcwAuAFUAcwBlAFMAaABlAGwAbABFAHgAZQBjAHUAdABlAD0AJABmAGEAbABzAGUAOwAkAHAAPQBbAEQAaQBhAGcAbgBvAHMAdABpAGMAcwAuAFAAcgBvAGMAZQBzAHMAXQA6ADoAUwB0AGEAcgB0ACgAJABzACkAOwAkAHAALgBXAGEAaQB0AEYAbwByAEUAeABpAHQAKAApADsAZQB4AGkAdAAgACQAcAAuAEUAeABpAHQAQwBvAGQAZQA=",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

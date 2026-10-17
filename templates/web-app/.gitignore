@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Next.js output and generated types
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Local runtime records, logs and test output
+.cache/
+playwright-report/
+test-results/
+
+# Environment files (commit only the example)
+.env*
+!.env.example
+
+# Agent task state, local agent settings and agent worktrees
+.state/
+.claude/settings.local.json
+.claude/worktrees/
+.playwright-cli/

@@ -1,0 +1,14 @@
+name = "[role_name, equal to the file stem]"
+description = "[One sentence in the voice of an assignment: the job as the team lead would hand it over.]"
+model = "[operator binding; see MODELS.md]"
+model_provider = "[operator binding]"
+model_reasoning_effort = "[operator binding]"
+developer_instructions = """
+[The job and the stance it takes, in a sentence or two.]
+[Reads: the user-level skill it works through, by name, and project guidance through the repository's AGENTS.md.]
+[Returns: what it hands back to the team lead, inline or at the evidence destination the assignment supplies.]
+[Does: the work it carries through to done without checking in.]
+[Returns to the team lead for: scope, architecture or authority it cannot settle.]
+[Never: the few actions its job excludes.]
+[No paths, commands, stacks, reading itineraries or model names; no backslash escapes.]
+"""

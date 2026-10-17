@@ -1,0 +1,90 @@
+{
+  "status": "complete",
+  "llm": {
+    "provider": "openrouter",
+    "model": "google/gemini-3.8-flash"
+  },
+  "message": "Review complete: 0 finding(s) across 2 selected item(s).",
+  "summary": {
+    "files_reviewed": 2,
+    "comments": 0,
+    "total_tokens": 44992,
+    "input_tokens": 42266,
+    "output_tokens": 2726,
+    "cache_read_tokens": 15751,
+    "elapsed": "26s"
+  },
+  "tool_calls": {
+    "total": 3,
+    "by_tool": {
+      "file_read": 3
+    },
+    "failure": 0,
+    "failure_by_tool": {},
+    "failure_details": []
+  },
+  "comments": [],
+  "groups": [
+    {
+      "label": "small change set",
+      "files": [
+        "skills/skills-list/scripts/list-skills.mjs",
+        "skills/skills-list/tests/list-skills.test.mjs"
+      ]
+    }
+  ],
+  "session_id": "cc704956-f758-4491-994e-5210fab0aaae",
+  "manifest": {
+    "schema_version": "ocr.run-manifest/v1",
+    "run_id": "cc704956-f758-4491-994e-5210fab0aaae",
+    "operation": "review",
+    "terminal_state": "complete",
+    "repository": {},
+    "input": {
+      "mode": "commit",
+      "requested_head": "0defb5ea85ec105f913985a2cc6eb52dd4c534d8",
+      "resolved_base": "acaff362877141e2c787e35531c40a230ef1d5e8",
+      "resolved_head": "0defb5ea85ec105f913985a2cc6eb52dd4c534d8",
+      "exact_range": "acaff362877141e2c787e35531c40a230ef1d5e8..0defb5ea85ec105f913985a2cc6eb52dd4c534d8",
+      "source_artifact_sha256": "e9abad6999cad2bdc58f4096bb644faf1ad9d3c3f1a972db4aeb001a0f90c263"
+    },
+    "execution": {
+      "ocr_version": "v1.12.7",
+      "provider": "openrouter",
+      "model": "google/gemini-3.8-flash",
+      "configured_concurrency": 1,
+      "rule_config_sha256": "fe1ddcdc6ef9774233cfcda52d9d3cac2a2a50be8d09cc77e2fa2749c0265193",
+      "runtime_config_sha256": "57434aee823b7f1bde692a10d052a8debc9cb28aea640a6aac1fa53903a90bf5"
+    },
+    "coverage": {
+      "selected": [
+        {
+          "item_id": "28d23b2073375910e8ee72e27d8ca32b88ddc3c7ee99bc1e852960b377941731",
+          "path": "skills/skills-list/scripts/list-skills.mjs",
+          "fingerprint": "eaa76eca7eba36d519fbb9715ad89a8eb6f7434d486e65135f3c4869f5f153cb"
+        },
+        {
+          "item_id": "4bd40f01ee6dac9b6df3c7cb7e0c1d5992bf8c49a1400d8ccc232ebee242fb57",
+          "path": "skills/skills-list/tests/list-skills.test.mjs",
+          "fingerprint": "a7022a4e21d82c568e53b9b6cbabbb3ec916b1a21c5594ade1c80089f43c5dc3"
+        }
+      ],
+      "completed": [
+        {
+          "item_id": "28d23b2073375910e8ee72e27d8ca32b88ddc3c7ee99bc1e852960b377941731",
+          "path": "skills/skills-list/scripts/list-skills.mjs",
+          "fingerprint": "eaa76eca7eba36d519fbb9715ad89a8eb6f7434d486e65135f3c4869f5f153cb"
+        },
+        {
+          "item_id": "4bd40f01ee6dac9b6df3c7cb7e0c1d5992bf8c49a1400d8ccc232ebee242fb57",
+          "path": "skills/skills-list/tests/list-skills.test.mjs",
+          "fingerprint": "a7022a4e21d82c568e53b9b6cbabbb3ec916b1a21c5594ade1c80089f43c5dc3"
+        }
+      ],
+      "reused": [],
+      "failed": [],
+      "waived": []
+    },
+    "elapsed_ms": 26277
+  }
+}

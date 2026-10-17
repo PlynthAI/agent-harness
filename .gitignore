@@ -1,0 +1,44 @@
+# Maintenance-only working area. Never deployed, never versioned.
+.local/
+
+# The owner's working records (goals, findings, plans): never versioned or deployed, so a copy of the harness carries none of them.
+/workspace/
+
+# Codex credentials and machine state must never be versioned.
+auth.json
+**/auth.json
+**/*.secret
+**/.sandbox-secrets/
+**/secrets/
+**/.codex-global-state.json
+
+# Generated archive payloads.
+*.tar
+
+# Runtime dependencies are installed from their owning package lockfiles.
+**/node_modules/
+
+# Scratch and generator leftovers.
+**/*.tmp
+**/*.tmp.*
+**/__pycache__/
+Thumbs.db
+.DS_Store
+
+# Obsidian vault settings for reading the harness locally; per-machine, never deployed.
+# Root only: the starter brain's .obsidian/ is part of the template and ships.
+/.obsidian/
+
+# Host-specific preview server launchers.
+.claude/launch.json
+
+# Vercel project link for the public site, written by `vercel link`.
+.vercel/
+
+# Environment files `vercel link` and `vercel env pull` write; they can hold tokens.
+.env*
+.playwright-cli/
+
+# The owner's private AGENTS.md overlay. This private source tracks it anyway
+# (an ignore rule never untracks a file); in a public clone it stays out of git.
+/AGENTS.private.md
