@@ -7,8 +7,35 @@ how work is planned, built, reviewed and delivered, and when to stop and ask.
 
 **Agents:** to install this harness, follow [SETUP.md](SETUP.md).
 
+**Website:** [kitchen.plynth.ai](https://kitchen.plynth.ai/) explains the
+harness in pictures, starting with
+[How it works](https://kitchen.plynth.ai/explore/how-it-works/).
+
 This is a public copy of a working harness. It is published as a snapshot: each
 update arrives as one commit, and issues and pull requests are not reviewed.
+
+## How it works
+
+### Who does what
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/roles-dark.png">
+  <img src="images/roles-light.png" alt="A coordinator chat assigns work to a team lead, which briefs six Codex roles (smart_worker, fast_worker, planner, explorer, researcher, tester) and two reviewers (fast_review, reviewer), then delivers to the repository. Solid borders may edit files; dashed borders never edit the work.">
+</picture>
+
+Each role is one file in `agents/`. Claude Code runs the same roles from the
+same files on Claude models.
+
+### From request to reviewed work
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/journey-dark.png">
+  <img src="images/journey-light.png" alt="A change moves through seven skills: brainstorm, planner, design, implement-spec, validate-implementation, code-review and delivery, each placed in the chat, repository, workspace, scratch root or GitHub where it reads or writes. A confirmed review problem returns to implement-spec. Lettered side steps cover understanding, writing and handoff.">
+</picture>
+
+A task uses only the stages it needs, and delivery goes only as far as you
+asked. The website covers the rest: installing, review, quality gates, tools,
+documents and adoption.
 
 ## What is inside
 
